@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\FoodController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
@@ -41,6 +42,8 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
 
     //*** Category */
     Route::apiResource('categories', CategoryController::class);
+    //*** Food api */
+    Route::apiResource('foods', FoodController::class);
 });
 
 
