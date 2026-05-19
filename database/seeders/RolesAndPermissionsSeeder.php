@@ -41,7 +41,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Create or retrieve the customer user
         $customerUser = User::firstOrCreate(
-            ['email' => 'kaziomr@yopmail.com'],
+            ['email' => 'kaziomar@yopmail.com'],
             [
                 'name' => 'John Customer',
                 'password' => Hash::make('11111111'),
