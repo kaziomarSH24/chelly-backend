@@ -16,6 +16,7 @@ class CategoryController extends Controller
     public function __construct(CategoryService $categoryService)
     {
         $this->categoryService = $categoryService;
+        $this->middleware('auth:sanctum')->except(['index', 'show']);
         $this->authorizeResource(Category::class, 'category', [
             'except' => ['index', 'show']
         ]);
@@ -29,7 +30,7 @@ class CategoryController extends Controller
             $q->where('status', 'active');
         };
         $categories = $this->categoryService->getAll($callback);
-        if($categories->isEmpty()){
+        if ($categories->isEmpty()) {
             return response_error('No categories found.', [], 404);
         }
 
