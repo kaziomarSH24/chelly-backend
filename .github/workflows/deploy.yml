@@ -1,0 +1,78 @@
+name: Build and Push Custom Backend Images to Docker Hub
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    name: Build and Push Images
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Docker Buildx for caching
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Validate Docker Hub secrets
+        run: |
+          if [ -z "${{ secrets.DOCKERHUB_USERNAME }}" ] || [ -z "${{ secrets.DOCKERHUB_TOKEN }}" ]; then
+            echo "❌ Docker Hub secrets not configured!"
+            exit 1
+          fi
+          echo "✅ Secrets are configured"
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Backend push
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          # Single architecture: amd64 (most common)
+          platforms: linux/amd64
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/chelly-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/chelly-backend:${{ github.sha }}
+          build-args: |
+            INSTALL_DEV=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # - name: Deploy to Server via SSH
+      #   uses: appleboy/ssh-action@master
+      #   with:
+      #     host: ${{ secrets.SERVER_HOST }}
+      #     username: ${{ secrets.SERVER_USER }}
+      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
+      #     port: 22
+      #     script: |
+      #       cd ${{ secrets.DEPLOY_PATH }}
+      #       docker compose pull kevin-app queue-worker scheduler
+
+      #       docker compose up -d --no-deps kevin-app queue-worker scheduler
+
+      #       echo "Waiting for container to initialize..."
+      #       sleep 10
+
+      #       echo "🔧 Fixing Permissions & Directories..."
+
+      #       docker compose exec -T kevin-app mkdir -p /var/www/resources/views
+      #       docker compose exec -T kevin-app mkdir -p /var/www/storage/framework/{views,cache,sessions}
+
+      #       docker compose exec -T kevin-app chown -R www-data:www-data /var/www/resources/views /var/www/storage
+      #       docker compose exec -T kevin-app chmod -R 775 /var/www/resources/views /var/www/storage
+
+      #       echo "🧹 Clearing Cache..."
+      #       docker compose exec -T kevin-app php artisan optimize:clear
+
+      #       docker image prune -f
