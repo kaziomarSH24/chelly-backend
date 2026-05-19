@@ -17,6 +17,14 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, HasRoles, HasApiTokens, Billable, LogsActivity;
 
+     // use AutoClearsCache; // Magic Starts Here!
+
+    // Optional: If updating a user should clear their posts cache too
+    // public function getRelatedCacheTags(): array
+    // {
+    //     return ['posts'];
+    // }
+
     /**
      * The attributes that are mass assignable.
      *
