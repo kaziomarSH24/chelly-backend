@@ -47,7 +47,7 @@ trait Cacheable
         return $tags;
     }
 
-     /**
+    /**
      * Clears the cache for a single item (e.g., getById).
      * This method is intended to be called from an observer.
      *
@@ -78,8 +78,31 @@ trait Cacheable
             $keyParts[] = 'user_' . (auth()->id() ?? 'guest');
         }
 
-        // Serialize arguments safely
-        $argumentString = serialize($arguments);
+        // Normalize arguments to avoid serializing Closures or complex objects
+        $normalize = function ($value) use (&$normalize) {
+            if ($value instanceof Closure) {
+                return 'closure';
+            }
+
+            if (is_array($value)) {
+                return array_map($normalize, $value);
+            }
+
+            if (is_object($value)) {
+                // For Eloquent models, include class and primary key when available
+                if (method_exists($value, 'getKey')) {
+                    return get_class($value) . ':' . ($value->getKey() ?? 'null');
+                }
+
+                // Fallback to class name for other objects
+                return get_class($value);
+            }
+
+            return $value;
+        };
+
+        $safeArguments = array_map($normalize, $arguments);
+        $argumentString = serialize($safeArguments);
 
         // Handle Request Queries for exact match in lists
         $queryString = '';
