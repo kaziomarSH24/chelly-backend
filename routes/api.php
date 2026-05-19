@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
@@ -135,6 +136,11 @@ Route::middleware('auth:sanctum', 'throttle:api')->prefix('v1')->group(function 
         Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
         Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
     });
+
+    //*** Category */
+    Route::apiResource('categories', CategoryController::class);
+
+     // Fallback route for undefined API endpoints
 
     Route::fallback(function () {
         return response_error('The requested API endpoint does not exist.', [], 404);
