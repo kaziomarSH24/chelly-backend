@@ -13,6 +13,7 @@ trait Cacheable
      */
     protected function cache(string $method, array $arguments, Closure $callback, int $ttl = 3600, bool $perUser = false)
     {
+        // dd($perUser);
         if (property_exists($this, 'cachingEnabled') && $this->cachingEnabled === false) {
             return $callback();
         }
@@ -24,7 +25,6 @@ trait Cacheable
         // Determine tags based on the method
         $tags = $this->determineCacheTags($method, $arguments);
         $key = $this->generateCacheKey($method, $arguments, $perUser);
-
         return Cache::tags($tags)->remember($key, $ttl, $callback);
     }
 
@@ -75,7 +75,8 @@ trait Cacheable
         ];
 
         if ($perUser) {
-            $keyParts[] = 'user_' . (auth()->id() ?? 'guest');
+            $user = auth('sanctum')->user() ?? request()->user() ?? auth()->user();
+            $keyParts[] = 'user_' . ($user?->getAuthIdentifier() ?? 'guest');
         }
 
         // Normalize arguments to avoid serializing Closures or complex objects
@@ -117,4 +118,5 @@ trait Cacheable
 
         return implode(':', $keyParts);
     }
+
 }

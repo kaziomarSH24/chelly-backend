@@ -18,6 +18,7 @@ class CategoryService extends BaseService
      * @var string
      */
     protected string $modelClass = Category::class;
+    protected bool $cachePerUser = true;
 
     public function __construct()
     {

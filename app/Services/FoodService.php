@@ -14,6 +14,7 @@ class FoodService extends BaseService
     use FileUploadTrait;
 
     protected string $modelClass = Food::class;
+    protected bool $cachePerUser = true;
 
     /**
      * Define allowed filters for Spatie QueryBuilder
