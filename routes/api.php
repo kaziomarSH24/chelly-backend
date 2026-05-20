@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\Admin\FoodController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
+use App\Http\Controllers\Api\V1\Admin\OfferController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
@@ -44,6 +45,8 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
     Route::apiResource('categories', CategoryController::class);
     //*** Food api */
     Route::apiResource('foods', FoodController::class);
+    //*** Offers api */
+    Route::apiResource('offers', OfferController::class);
 });
 
 
