@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\BannerController;
 use App\Http\Controllers\Api\V1\Admin\FoodController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\OfferController;
@@ -47,6 +48,8 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
     Route::apiResource('foods', FoodController::class);
     //*** Offers api */
     Route::apiResource('offers', OfferController::class);
+    //*** Banner */
+    Route::apiResource('banners', BannerController::class);
 });
 
 
