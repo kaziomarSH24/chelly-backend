@@ -40,4 +40,12 @@ return [
         'credentials' => base_path(env('FIREBASE_CREDENTIALS')),
     ],
 
+    'fiserv' => [
+        'base_url' => env('FISERV_BASE_URL'),
+        'client_id' => env('FISERV_CLIENT_ID'),
+        'api_key' => env('FISERV_API_KEY'),
+        'api_secret' => env('FISERV_API_SECRET'),
+        'store_id' => env('FISERV_STORE_ID'),
+    ],
+
 ];
