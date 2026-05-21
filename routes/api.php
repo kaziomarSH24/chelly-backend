@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\Admin\BannerController;
 use App\Http\Controllers\Api\V1\Admin\BlogController;
 use App\Http\Controllers\Api\V1\Admin\FoodController;
@@ -10,18 +11,8 @@ use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Auth\PasswordController;
 use App\Http\Controllers\Api\V1\Auth\ProfileController;
 use App\Http\Controllers\Api\V1\Auth\VerificationController;
-use App\Http\Controllers\Api\V1\Chat\ConversationController;
-use App\Http\Controllers\Api\V1\Chat\GroupController;
-use App\Http\Controllers\Api\V1\Chat\MessageController;
 use App\Http\Controllers\Api\V1\NotificationController;
-use App\Http\Controllers\Api\V1\Payment\InvoiceController;
-use App\Http\Controllers\Api\V1\Payment\OneTimePaymentController;
-use App\Http\Controllers\Api\V1\Payment\PaymentMethodController;
-use App\Http\Controllers\Api\V1\Payment\RefundController;
-use App\Http\Controllers\Api\V1\Payment\StripePortalController;
-use App\Http\Controllers\Api\V1\Payment\SubscriptionController;
-
-
+use App\Http\Controllers\Api\V1\OrderController;
 
 // Route::post(
 //     '/v1/stripe/webhook',
@@ -83,6 +74,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('v1')->group(functio
         Route::post('/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])->name('mark-all-as-read');
         Route::delete('/{notification}', [NotificationController::class, 'destroy'])->name('destroy');
     });
+
+
+    //Order (checkout)
+    Route::post('/checkout', [OrderController::class, 'checkout']);
+    //Address Routes
+    Route::apiResource('addresses', AddressController::class)->except(['show']);
 
 
 

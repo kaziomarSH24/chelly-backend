@@ -10,18 +10,7 @@ class Transaction extends Model
 {
    use HasFactory;
 
-    protected $fillable = [
-        'user_id',
-        'payable_id',
-        'payable_type',
-        'gateway',
-        'gateway_transaction_id',
-        'payment_intent_id',
-        'amount',
-        'currency',
-        'status',
-        'metadata',
-    ];
+    protected $guarded = ['id'];
 
     protected $casts = [
         'metadata' => 'array',
