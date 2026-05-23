@@ -49,6 +49,7 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
 
     //** settings public api
     Route::get('settings', [SettingController::class, 'index']);
+    Route::get('settings/{key}', [SettingController::class, 'show']);
 });
 
 

@@ -9,9 +9,7 @@ use Illuminate\Http\Request;
 
 class SettingController extends Controller
 {
-    public function __construct(protected SettingService $settingService)
-    {
-    }
+    public function __construct(protected SettingService $settingService) {}
 
     /**
      * Get all global settings
@@ -20,6 +18,22 @@ class SettingController extends Controller
     {
         $settings = $this->settingService->getAllSettings();
         return response_success('Settings retrieved successfully.', $settings);
+    }
+
+    /**
+     * Get a specific setting by key
+     */
+    public function show(string $key)
+    {
+        $value = $this->settingService->getSettingByKey($key);
+
+        if (is_null($value)) {
+            return response_error('Setting not found.', [], 404);
+        }
+
+        return response_success('Setting retrieved successfully.', [
+            $key => $value
+        ]);
     }
 
     /**
