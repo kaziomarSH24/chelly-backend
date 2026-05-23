@@ -12,9 +12,29 @@ class SettingService
      */
     public function getAllSettings(): array
     {
-        // Cache settings for 24 hours to improve performance on frontend
         return Cache::remember('global_settings', 86400, function () {
-            return Setting::pluck('value', 'key')->toArray();
+
+            $excludedKeys = [
+                'privacy_policy',
+                'terms_conditions',
+                'payment_guidelines'
+            ];
+
+            return Setting::whereNotIn('key', $excludedKeys)
+                          ->pluck('value', 'key')
+                          ->toArray();
+        });
+    }
+
+
+    /**
+     * Retrieve a specific setting by its key
+     */
+    public function getSettingByKey(string $key)
+    {
+        return Cache::remember("setting_{$key}", 86400, function () use ($key) {
+            $setting = Setting::where('key', $key)->first();
+            return $setting ? $setting->value : null;
         });
     }
 
@@ -23,6 +43,7 @@ class SettingService
      */
     public function updateSettings(array $data): void
     {
+        // dd($data);
         foreach ($data as $key => $value) {
             if (is_null($value)) {
                 Setting::where('key', $key)->delete();
