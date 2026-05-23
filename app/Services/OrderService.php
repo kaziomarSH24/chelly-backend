@@ -27,22 +27,22 @@ class OrderService extends BaseService
 
 
     // Define allowed filters
-     protected function getAllowedFilters(): array
+    protected function getAllowedFilters(): array
     {
         return [];
     }
 
     // Define allowed includes relationships
-     protected function getAllowedIncludes(): array
-     {
+    protected function getAllowedIncludes(): array
+    {
         return [];
-     }
+    }
 
-     // Define allowed sorts
-     protected function getAllowedSorts(): array
-     {
+    // Define allowed sorts
+    protected function getAllowedSorts(): array
+    {
         return [];
-     }
+    }
 
     /**
      * Process checkout and create order, items, and deliveries.
@@ -115,5 +115,60 @@ class OrderService extends BaseService
 
             $order->deliveries()->insert($schedules);
         }
+    }
+
+    /**
+     * Retrieve paginated list of orders for a specific user
+     */
+    public function getUserOrders(int $userId)
+    {
+        return \Spatie\QueryBuilder\QueryBuilder::for(Order::class)
+            ->where('user_id', $userId)
+            ->allowedFilters(['status'])
+            ->allowedSorts(['created_at', 'total_amount'])
+            ->with(['items.food'])
+            ->withCount([
+                'deliveries as total_deliveries',
+                'deliveries as completed_deliveries' => function ($query) {
+                    $query->where('status', 'delivered');
+                }
+            ])
+            ->latest()
+            ->paginate(10);
+    }
+
+
+    /**
+     * Retrieve all orders for the admin dashboard with advanced filtering
+     */
+    public function getAllAdminOrders()
+    {
+        return \Spatie\QueryBuilder\QueryBuilder::for(Order::class)
+            ->allowedFilters([
+                'status',
+                \Spatie\QueryBuilder\AllowedFilter::partial('order_number'),
+                // Filter by customer name using relation
+                \Spatie\QueryBuilder\AllowedFilter::partial('customer', 'user.name'),
+                // Filter by food name using nested relation
+                \Spatie\QueryBuilder\AllowedFilter::partial('food', 'items.food.name'),
+            ])
+            ->allowedSorts(['created_at', 'total_amount', 'status'])
+            ->with(['user', 'items.food']) // Eager load relations for the table
+            ->withCount([
+                'deliveries as total_deliveries',
+                'deliveries as completed_deliveries' => function ($query) {
+                    $query->where('status', 'delivered');
+                }
+            ])
+            ->latest()
+            ->paginate(10);
+    }
+
+    /**
+     * Update the status of an order
+     */
+    public function updateOrderStatus(int $orderId, string $status): Order
+    {
+        return $this->update($orderId, ['status' => $status]);
     }
 }

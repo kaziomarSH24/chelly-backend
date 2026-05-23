@@ -13,6 +13,8 @@ use App\Http\Controllers\Api\V1\Auth\ProfileController;
 use App\Http\Controllers\Api\V1\Auth\VerificationController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrderController;
+use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
+use App\Http\Controllers\Api\V1\Admin\SettingController;
 
 // Route::post(
 //     '/v1/stripe/webhook',
@@ -44,6 +46,9 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
     Route::apiResource('banners', BannerController::class);
     //*** Blog */
     Route::apiResource('blogs', BlogController::class);
+
+    //** settings public api
+    Route::get('settings', [SettingController::class, 'index']);
 });
 
 
@@ -81,7 +86,22 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('v1')->group(functio
     //Address Routes
     Route::apiResource('addresses', AddressController::class)->except(['show']);
 
+    // User Orders Routes
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+    Route::put('/orders/{id}/cancel', [OrderController::class, 'cancel']);
 
+
+    //Admin Routes (Protected by role:admin middleware in RouteServiceProvider)
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('/orders', [AdminOrderController::class, 'index']);
+        Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
+        Route::put('/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
+
+        //settings
+        Route::get('/settings', [SettingController::class, 'index']);
+        Route::post('/settings', [SettingController::class, 'update']);
+    });
 
     // Fallback route for undefined API endpoints
 
