@@ -8,6 +8,7 @@ use App\Services\FiservPaymentService;
 use App\Services\OrderService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 
 class OrderController extends Controller
@@ -16,6 +17,50 @@ class OrderController extends Controller
         protected OrderService $orderService,
         protected FiservPaymentService $paymentService
     ) {}
+
+
+    public function index()
+    {
+        $userId = auth('sanctum')->id();
+        $orders = $this->orderService->getUserOrders($userId);
+
+        if ($orders->isEmpty()) {
+            return response_error('No orders found.', [], 404);
+        }
+
+        return response_success('Orders retrieved successfully.', $orders);
+    }
+
+    /**
+     * Display the specified order details (For the View icon).
+     */
+    public function show(string $id)
+    {
+        $userId = auth('sanctum')->id();
+
+        // Load order with related items, food details, deliveries, and address
+        $order = $this->orderService->getById($id, ['items.food', 'deliveries', 'address']);
+
+        Gate::authorize('view', $order);
+
+        return response_success('Order details retrieved successfully.', $order);
+    }
+
+    /**
+     * Cancel an order (For the Delete/Trash icon).
+     */
+    public function cancel(string $id)
+    {
+        try {
+            $order = $this->orderService->getById($id);
+            Gate::authorize('cancel', $order);
+            $this->orderService->update($id, ['status' => 'cancelled']);
+
+            return response_success('Order cancelled successfully.');
+        } catch (\Exception $e) {
+            return response_error('Failed to cancel order.', ['error' => $e->getMessage()], 500);
+        }
+    }
 
     // public function checkout(OrderRequest $request)
     // {
