@@ -4,7 +4,7 @@ namespace App\Http\Requests\Auth;
 
 use App\Http\Requests\BaseRequest;
 
-class UpdateProfileRequest extends BaseRequest
+class UpdateProfileRequest  extends BaseRequest
 {
     /**
      * Get the validation rules that apply to the request.
@@ -17,6 +17,8 @@ class UpdateProfileRequest extends BaseRequest
             'name' => 'sometimes|string|max:255',
             'email' => 'sometimes|email|unique:users,email,' . $this->user()->id,
             'avatar' => 'sometimes|image|max:5120', // max 5MB
+            'phone' => 'sometimes|string|max:20',
+            'address' => 'sometimes|string|max:500',
         ];
     }
 }
