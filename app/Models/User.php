@@ -60,4 +60,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(FcmToken::class);
     }
+
+    //orders relationship
+    public function orders()
+    {
+        return $this->hasMany(Order::class);
+    }
 }

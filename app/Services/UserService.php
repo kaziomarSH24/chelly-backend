@@ -5,10 +5,12 @@ namespace App\Services;
 use App\Filters\GlobalSearchFilter;
 use App\Services\BaseService;
 use App\Models\User;
+use App\Traits\FileUploadTrait;
 use Spatie\QueryBuilder\AllowedFilter;
 
 class UserService extends BaseService
 {
+    use FileUploadTrait;
     /**
      * The model class name.
      *
@@ -22,7 +24,6 @@ class UserService extends BaseService
     {
         // Ensure BaseService initializes the model instance
         parent::__construct();
-
     }
 
     /**
@@ -32,8 +33,8 @@ class UserService extends BaseService
     protected function getAllowedFilters(): array
     {
         return [
-            AllowedFilter::custom('search', new GlobalSearchFilter, 'first_name,last_name,email'),
-            'first_name',
+            AllowedFilter::custom('search', new GlobalSearchFilter, 'name,email'),
+            'name',
             'email',
             AllowedFilter::exact('status'),
         ];
@@ -47,7 +48,7 @@ class UserService extends BaseService
     {
         return [
             'id',
-            'first_name',
+            'name',
             'created_at',
         ];
     }
@@ -63,5 +64,34 @@ class UserService extends BaseService
         ];
     }
 
+    public function toggleStatus(int $id): User
+    {
+        $user = User::findOrFail($id);
 
+        // Prevent admin from deactivating themselves
+        if ($user->id === auth('sanctum')->id()) {
+            abort(403, 'You cannot deactivate your own account.');
+        }
+
+        $user->update([
+            'status' => $user->status === 'active' ? 'inactive' : 'active'
+        ]);
+
+        return $user;
+    }
+
+    public function deleteUser(int $id): bool
+    {
+        $user = User::findOrFail($id);
+
+        if ($user->id === auth('sanctum')->id()) {
+            abort(403, 'You cannot delete your own account.');
+        }
+        //avatar remove logic
+        if ($user->avatar) {
+            $this->deleteFile($user->avatar);
+        }
+
+        return $user->delete();
+    }
 }

@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\OrderController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\SettingController;
+use App\Http\Controllers\Api\V1\Admin\UserController as AdminUserController;
 
 // Route::post(
 //     '/v1/stripe/webhook',
@@ -99,6 +100,12 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('v1')->group(functio
 
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index']);
+
+        //user management
+        Route::get('/users', [AdminUserController::class, 'index']);
+        Route::get('/users/{id}', [AdminUserController::class, 'show']);
+        Route::put('/users/{id}/toggle-status', [AdminUserController::class, 'toggleStatus']);
+        Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
 
         Route::get('/orders', [AdminOrderController::class, 'index']);
         Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
