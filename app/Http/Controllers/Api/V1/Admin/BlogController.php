@@ -29,7 +29,7 @@ class BlogController extends Controller
             }
         });
 
-        if($blogs->isEmpty()) {
+        if ($blogs->isEmpty()) {
             return response_error('No blogs found.', [], 404);
         }
 
@@ -44,7 +44,7 @@ class BlogController extends Controller
 
     public function show(string $id)
     {
-        $blog = $this->blogService->getById($id);
+        $blog = $this->blogService->getById($id, ['category']);
 
         if ($blog->status === 'inactive') {
             $user = auth('sanctum')->user();

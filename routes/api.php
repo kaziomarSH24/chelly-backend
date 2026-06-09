@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\Admin\BlogController;
 use App\Http\Controllers\Api\V1\Admin\FoodController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
+use App\Http\Controllers\Api\V1\Admin\FaqController;
 use App\Http\Controllers\Api\V1\Admin\OfferController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\V1\Auth\AuthController;
@@ -52,6 +53,9 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
     //** settings public api
     Route::get('settings', [SettingController::class, 'index']);
     Route::get('settings/{key}', [SettingController::class, 'show']);
+
+    //faqs
+    Route::apiResource('faqs', FaqController::class);
 });
 
 
@@ -121,4 +125,9 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('v1')->group(functio
     Route::fallback(function () {
         return response_error('The requested API endpoint does not exist.', [], 404);
     });
-});
+
+    //test fiserv api
+    });
+    Route::get('/v1/test-fiserv', [\App\Http\Controllers\Api\V1\FiservController::class, 'processPayment']);
+    Route::get('/v1/fiserv-balance', [\App\Http\Controllers\Api\V1\FiservController::class, 'checkBalance']);
+    Route::get('/v1/fiserv-refund', [\App\Http\Controllers\Api\V1\FiservController::class, 'processRefund']);

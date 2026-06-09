@@ -22,6 +22,7 @@ class UpdateSettingsRequest extends BaseRequest
             'twitter_url' => 'nullable|url',
             'youtube_url' => 'nullable|url',
 
+
             'privacy_policy' => 'nullable|string',
             'terms_conditions' => 'nullable|string',
             'payment_guidelines' => 'nullable|string',

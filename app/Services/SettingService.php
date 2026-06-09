@@ -21,8 +21,8 @@ class SettingService
             ];
 
             return Setting::whereNotIn('key', $excludedKeys)
-                          ->pluck('value', 'key')
-                          ->toArray();
+                ->pluck('value', 'key')
+                ->toArray();
         });
     }
 
@@ -43,7 +43,6 @@ class SettingService
      */
     public function updateSettings(array $data): void
     {
-        // dd($data);
         foreach ($data as $key => $value) {
             if (is_null($value)) {
                 Setting::where('key', $key)->delete();
@@ -53,7 +52,12 @@ class SettingService
                     ['value' => $value]
                 );
             }
+
+            // Clear the specific cache for this individual key
+            Cache::forget("setting_{$key}");
         }
+
+        // Keep this if you have another method that caches all settings together
         Cache::forget('global_settings');
     }
 }

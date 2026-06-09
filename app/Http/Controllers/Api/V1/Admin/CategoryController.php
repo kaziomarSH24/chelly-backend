@@ -53,8 +53,20 @@ class CategoryController extends Controller
      */
     public function show($id)
     {
+        $perPage = request()->query('per_page', 10); // Default to 10 items per page if not specified
+        // Fetch the category details without eager loading foods
         $category = $this->categoryService->getById($id);
-        return response_success('Category details retrieved successfully.', $category);
+
+        // Fetch related foods with pagination (e.g., 10 items per page)
+        $foods = $category->foods()->paginate($perPage);
+
+        // Structure the data cleanly for the API response
+        $data = [
+            'category' => $category,
+            'foods' => $foods
+        ];
+
+        return response_success('Category details retrieved successfully.', $data);
     }
 
 

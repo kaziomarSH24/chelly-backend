@@ -39,7 +39,7 @@ class AuthService
             $this->registerFcmToken($user, $data['fcm_token']);
         }
 
-        $user->assignRole('user');
+        $user->assignRole('customer');
         $user->notify(new SendOtpNotification($otp, $token, 'verify your account', '/verify-email'));
 
         return $user;
