@@ -114,6 +114,8 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('v1')->group(functio
         Route::get('/orders', [AdminOrderController::class, 'index']);
         Route::get('/orders/{id}', [AdminOrderController::class, 'show']);
         Route::put('/orders/{id}/status', [AdminOrderController::class, 'updateStatus']);
+        Route::post('/orders/{id}/refund', [AdminOrderController::class, 'refund']);
+        Route::get('/orders/transaction/{transactionId}', [AdminOrderController::class, 'checkTransactionStatus']);
 
         //settings
         Route::get('/settings', [SettingController::class, 'index']);

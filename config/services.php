@@ -46,6 +46,7 @@ return [
         'api_key' => env('FISERV_API_KEY'),
         'api_secret' => env('FISERV_API_SECRET'),
         'store_id' => env('FISERV_STORE_ID'),
+        'terminal_id' => env('FISERV_TERMINAL_ID', '10000001'),
     ],
 
     'shopify' => [

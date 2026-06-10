@@ -49,96 +49,161 @@ class OrderController extends Controller
     /**
      * Cancel an order (For the Delete/Trash icon).
      */
+    // public function cancel(string $id)
+    // {
+    //     try {
+    //         $order = $this->orderService->getById($id);
+    //         Gate::authorize('cancel', $order);
+    //         $this->orderService->update($id, ['status' => 'cancelled']);
+
+    //         return response_success('Order cancelled successfully.');
+    //     } catch (\Exception $e) {
+    //         return response_error('Failed to cancel order.', ['error' => $e->getMessage()], 500);
+    //     }
+    // }
+
     public function cancel(string $id)
     {
         try {
             $order = $this->orderService->getById($id);
             Gate::authorize('cancel', $order);
+
+            // check order status
+            if ($order->status !== 'pending') {
+                return response_error('Sorry, your order is already processing and cannot be cancelled.', [], 403);
+            }
+
+            // payment check
+            if ($order->payment_status === 'paid') {
+
+                $transaction = $order->transactions()->where('gateway', 'fiserv')->where('status', 'success')->first();
+
+                if (!$transaction || !$transaction->gateway_transaction_id) {
+                    return response_error('Original payment transaction not found. Please contact support.', [], 404);
+                }
+
+                // Fiserv
+                $refundResponse = $this->paymentService->processRefund(
+                    $order->total_amount,
+                    $transaction->gateway_transaction_id
+                );
+
+                $transactionState = $refundResponse['gatewayResponse']['transactionState'] ?? null;
+
+                if ($transactionState !== 'CAPTURED' && $transactionState !== 'APPROVED') {
+                    return response_error('Gateway rejected the refund. Please try again later.', $refundResponse, 400);
+                }
+
+                // Refund transaction record
+                $order->transactions()->create([
+                    'user_id' => auth('sanctum')->id(),
+                    'gateway' => 'fiserv',
+                    'gateway_transaction_id' => $refundResponse['gatewayResponse']['transactionProcessingDetails']['transactionId'] ?? null,
+                    'amount' => $order->total_amount,
+                    'currency' => 'USD',
+                    'status' => 'refunded',
+                    'metadata' => $refundResponse,
+                ]);
+
+                // update payment status to refunded
+                $this->orderService->update($id, ['payment_status' => 'refunded']);
+            }
+
+            // update order status to cancelled
             $this->orderService->update($id, ['status' => 'cancelled']);
 
-            return response_success('Order cancelled successfully.');
+            $message = $order->payment_status === 'paid'
+                ? 'Order cancelled and money refunded successfully.'
+                : 'Order cancelled successfully.';
+
+            return response_success($message);
         } catch (\Exception $e) {
             return response_error('Failed to cancel order.', ['error' => $e->getMessage()], 500);
         }
     }
 
-    // public function checkout(OrderRequest $request)
-    // {
-    //     try {
-    //         $userId = auth('sanctum')->id();
-    //         $items = $request->validated('items');
-
-    //         // 1. Create the order
-    //         $order = $this->orderService->createOrder($userId, $items);
-
-    //         // 2. Initiate Hosted Payment Link with Fiserv
-    //         $paymentResponse = $this->paymentService->createPaymentLink(
-    //             $order->order_number,
-    //             $order->total_amount
-    //         );
-
-    //         // 3. Save the transaction record
-    //         $order->transactions()->create([
-    //             'user_id' => $userId,
-    //             'gateway' => 'fiserv',
-    //             // Fiserv er response theke id ta ekhane seve hobe
-    //             'gateway_transaction_id' => $paymentResponse['paymentLinkId'] ?? $paymentResponse['transactionId'] ?? null,
-    //             'amount' => $order->total_amount,
-    //             'currency' => 'USD',
-    //             'status' => 'pending',
-    //             'metadata' => $paymentResponse,
-    //         ]);
-
-    //         // Fiserv je URL ta dibe seta frontend e pathiye dile, frontend user ke oi link e redirect korbe
-    //         $checkoutUrl = $paymentResponse['paymentUrl'] ?? $paymentResponse['url'] ?? null;
-
-    //         return response_success('Order placed. Redirect to payment link.', [
-    //             'order' => $order,
-    //             'checkout_url' => $checkoutUrl,
-    //             'payment_data' => $paymentResponse // Debug korar jonno pura response ta dicchi
-    //         ], 201);
-    //     } catch (Exception $e) {
-    //         return response_error('Checkout failed.', ['error' => $e->getMessage()], 500);
-    //     }
-    // }
     public function checkout(OrderRequest $request)
     {
         try {
             $userId = auth('sanctum')->id();
             $items = $request->validated('items');
 
-            // 1. Create the order using the service
+            $cardDetails = $request->only(['card_number', 'exp_month', 'exp_year', 'cvv']);
+
             $order = $this->orderService->createOrder($userId, $items);
 
-            // 2. TEMPORARILY BYPASS FISERV PAYMENT
-            // We will uncomment this when the Fiserv API credentials are fully active
-            /*
-            $paymentResponse = $this->paymentService->createPaymentLink(
-                $order->order_number,
-                $order->total_amount
+            $paymentResponse = $this->paymentService->processCharge(
+                $order->total_amount,
+                $cardDetails,
+                $order->order_number
             );
-            */
 
-            // 3. Save a dummy transaction record to maintain database relations
+            $approvalStatus = $paymentResponse['gatewayResponse']['transactionState'] ?? null;
+            $transactionId = $paymentResponse['gatewayResponse']['transactionProcessingDetails']['transactionId'] ?? null;
+
+            if ($approvalStatus !== 'CAPTURED' && $approvalStatus !== 'APPROVED') {
+                return response_error('Payment was not approved by gateway.', $paymentResponse, 400);
+            }
+
+            // 3. Save the transaction record (Success state)
             $order->transactions()->create([
                 'user_id' => $userId,
-                'gateway' => 'dummy_bypass', // Indicating this is a mocked payment
-                'gateway_transaction_id' => 'mock_' . Str::random(10),
+                'gateway' => 'fiserv',
+                'gateway_transaction_id' => $transactionId,
                 'amount' => $order->total_amount,
                 'currency' => 'USD',
-                'status' => 'success', // Set to success so we can process the order in frontend
-                'metadata' => ['note' => 'Payment gateway temporarily bypassed for development'],
+                'status' => 'success',
+                'metadata' => $paymentResponse,
             ]);
 
-            // 4. Update order payment status to paid (mocked)
+            // 4. Update order payment status to paid
             $order->update(['payment_status' => 'paid']);
 
-            return response_success('Order placed successfully (Payment bypassed).', [
+            return response_success('Order placed and payment processed successfully.', [
                 'order' => $order,
-                'checkout_url' => null, // No redirect URL needed for now
             ], 201);
         } catch (Exception $e) {
             return response_error('Checkout failed.', ['error' => $e->getMessage()], 500);
         }
     }
+    // public function checkout(OrderRequest $request)
+    // {
+    //     try {
+    //         $userId = auth('sanctum')->id();
+    //         $items = $request->validated('items');
+
+    //         // 1. Create the order using the service
+    //         $order = $this->orderService->createOrder($userId, $items);
+
+    //         // 2. TEMPORARILY BYPASS FISERV PAYMENT
+    //         // We will uncomment this when the Fiserv API credentials are fully active
+    //         /*
+    //         $paymentResponse = $this->paymentService->createPaymentLink(
+    //             $order->order_number,
+    //             $order->total_amount
+    //         );
+    //         */
+
+    //         // 3. Save a dummy transaction record to maintain database relations
+    //         $order->transactions()->create([
+    //             'user_id' => $userId,
+    //             'gateway' => 'dummy_bypass', // Indicating this is a mocked payment
+    //             'gateway_transaction_id' => 'mock_' . Str::random(10),
+    //             'amount' => $order->total_amount,
+    //             'currency' => 'USD',
+    //             'status' => 'success', // Set to success so we can process the order in frontend
+    //             'metadata' => ['note' => 'Payment gateway temporarily bypassed for development'],
+    //         ]);
+
+    //         // 4. Update order payment status to paid (mocked)
+    //         $order->update(['payment_status' => 'paid']);
+
+    //         return response_success('Order placed successfully (Payment bypassed).', [
+    //             'order' => $order,
+    //             'checkout_url' => null, // No redirect URL needed for now
+    //         ], 201);
+    //     } catch (Exception $e) {
+    //         return response_error('Checkout failed.', ['error' => $e->getMessage()], 500);
+    //     }
+    // }
 }

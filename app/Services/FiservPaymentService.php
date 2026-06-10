@@ -11,43 +11,105 @@ class FiservPaymentService
     protected string $baseUrl;
     protected string $apiKey;
     protected string $apiSecret;
-    protected string $storeId; // This acts as the merchantId
+    protected string $storeId; // Merchant ID
+    protected string $terminalId; // Standard terminal ID
 
     public function __construct()
     {
-        $this->baseUrl = config('services.fiserv.base_url');
+        // Using config instead of hardcoded values for security
+        $this->baseUrl = rtrim(config('services.fiserv.base_url', 'https://connect-cert.fiservapis.com/ch'), '/');
         $this->apiKey = config('services.fiserv.api_key');
         $this->apiSecret = config('services.fiserv.api_secret');
-        $this->storeId = config('services.fiserv.store_id');
+        $this->storeId = config('services.fiserv.store_id', '100008000003683');
+        $this->terminalId = config('services.fiserv.terminal_id', '10000001');
     }
 
-    public function createPaymentLink(string $orderNumber, float $amount)
+    /**
+     * Process a direct payment charge
+     */
+    public function processCharge(float $amount, array $cardDetails, string $orderNumber)
     {
-        $endpoint = '/payments/v1/payment-urls';
-        $url = rtrim($this->baseUrl, '/') . $endpoint;
+        $endpoint = $this->baseUrl . '/payments/v1/charges';
 
-        // Updated Payload matching the documentation exactly
         $payload = [
-            'amount' => [
-                'total' => round($amount, 2),
-                'currency' => 'USD',
+            "amount" => [
+                "total" => round($amount, 2),
+                "currency" => "USD"
             ],
-            'transactionType' => 'SALE',
-            'merchantDetails' => [
-                'merchantId' => $this->storeId, // Your MID: 100008000003683
-                'terminalId' => '10000001'      // Standard test terminal ID
+            "source" => [
+                "sourceType" => "PaymentCard",
+                "card" => [
+                    "cardData" => $cardDetails['card_number'],
+                    "expirationMonth" => $cardDetails['exp_month'],
+                    "expirationYear" => $cardDetails['exp_year'],
+                    "securityCode" => $cardDetails['cvv']
+                ]
             ],
-            'transactionDetails' => [
-                'merchantTransactionId' => $orderNumber
+            "transactionDetails" => [
+                "captureFlag" => true,
+                "merchantTransactionId" => $orderNumber
+            ],
+            "merchantDetails" => [
+                "merchantId" => $this->storeId,
+                "terminalId" => $this->terminalId
             ]
         ];
 
-        $payloadJson = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-        $headers = $this->generateHeaders($payloadJson);
+        return $this->sendRequest($endpoint, $payload);
+    }
+
+    /**
+     * Process a refund
+     */
+    public function processRefund(float $amount, string $originalTransactionId)
+    {
+        $endpoint = $this->baseUrl . '/payments/v1/refunds';
+
+        $payload = [
+            "amount" => [
+                "total" => round($amount, 2),
+                "currency" => "USD"
+            ],
+            "referenceTransactionDetails" => [
+                "referenceTransactionId" => $originalTransactionId
+            ],
+            "merchantDetails" => [
+                "merchantId" => $this->storeId,
+                "terminalId" => $this->terminalId
+            ]
+        ];
+
+        return $this->sendRequest($endpoint, $payload);
+    }
+
+    /**
+     * Common method to generate headers and send the request
+     */
+    private function sendRequest(string $endpoint, array $payloadObj)
+    {
+        $clientRequestId = (string) Str::uuid();
+        $timestamp = (string) round(microtime(true) * 1000);
+
+        $payloadString = json_encode($payloadObj, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+
+        // Generate HMAC Signature
+        $messageToSign = $this->apiKey . $clientRequestId . $timestamp . $payloadString;
+        $hmacHex = hash_hmac('sha256', $messageToSign, $this->apiSecret, true);
+        $signatureBase64 = base64_encode($hmacHex);
+
+        $headers = [
+            'Accept' => 'application/json',
+            'Content-Type' => 'application/json',
+            'Api-Key' => $this->apiKey,
+            'Client-Request-Id' => $clientRequestId,
+            'Timestamp' => $timestamp,
+            'Auth-Token-Type' => 'HMAC',
+            'Authorization' => $signatureBase64
+        ];
 
         $response = Http::withHeaders($headers)
-            ->withBody($payloadJson, 'application/json')
-            ->post($url);
+            ->withBody($payloadString, 'application/json')
+            ->post($endpoint);
 
         if ($response->failed()) {
             throw new Exception('Fiserv Payment Error: ' . $response->body());
@@ -56,24 +118,19 @@ class FiservPaymentService
         return $response->json();
     }
 
-    private function generateHeaders(string $payloadJson): array
+    /**
+     * Get transaction history and status directly from Fiserv Commerce Hub.
+     */
+    public function transactionInquiry(string $transactionId)
     {
-        $clientRequestId = (string) Str::uuid();
-        $timestamp = (string) intval(microtime(true) * 1000);
-
-        $rawSignature = $this->apiKey . $clientRequestId . $timestamp . $payloadJson;
-
-        // Use 'false' to output lower-case hex, then base64 encode it (As per the documentation example)
-        $hmacHex = hash_hmac('sha256', $rawSignature, $this->apiSecret, false);
-        $base64Signature = base64_encode($hmacHex);
-
-        return [
-            'Content-Type' => 'application/json',
-            'Api-Key' => $this->apiKey,
-            'Timestamp' => $timestamp,
-            'Client-Request-Id' => $clientRequestId,
-            'Auth-Token-Type' => 'HMAC',                 // Added exactly as per docs
-            'Authorization' => $base64Signature,         // Replaced Message-Signature
+        $payload = [
+            'referenceTransactionDetails' => [
+                'referenceTransactionId' => $transactionId
+            ],
+            'merchantDetails' => [
+                'merchantId' => config('services.fiserv.merchant_id')
+            ]
         ];
+        return $this->sendRequest('/payments/v1/transaction-inquiry', $payload);
     }
 }
