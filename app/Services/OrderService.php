@@ -47,9 +47,10 @@ class OrderService extends BaseService
     /**
      * Process checkout and create order, items, and deliveries.
      */
-    public function createOrder(int $userId, array $items)
+    public function createOrder(int $userId, array $items, array $deliveryInfo)
     {
-        return DB::transaction(function () use ($userId, $items) {
+
+        return DB::transaction(function () use ($userId, $items, $deliveryInfo) {
             $preparedItems = $this->prepareItemsData($items);
 
             // Calculate grand total from prepared items
@@ -62,6 +63,12 @@ class OrderService extends BaseService
                 'total_amount' => $totalAmount,
                 'status' => 'pending',
                 'payment_status' => 'pending',
+
+                'payment_method' => $deliveryInfo['payment_method'],
+                'full_name' => $deliveryInfo['full_name'],
+                'email' => $deliveryInfo['email'] ?? null,
+                'phone' => $deliveryInfo['phone'],
+                'address' => $deliveryInfo['address'],
             ]);
 
             $this->createOrderItemsAndSchedules($order, $preparedItems);
@@ -134,7 +141,7 @@ class OrderService extends BaseService
                 }
             ])
             ->latest()
-            ->paginate(10);
+            ->paginate(request()->get('per_page', 10));
     }
 
 
@@ -161,7 +168,7 @@ class OrderService extends BaseService
                 }
             ])
             ->latest()
-            ->paginate(10);
+            ->paginate(request()->get('per_page', 10));
     }
 
     /**

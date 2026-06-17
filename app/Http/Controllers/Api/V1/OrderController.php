@@ -4,11 +4,15 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\OrderRequest;
+use App\Models\User;
+use App\Notifications\NewOrderPlaced;
+use App\Notifications\OrderCancelled;
 use App\Services\FiservPaymentService;
 use App\Services\OrderService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
 class OrderController extends Controller
@@ -115,6 +119,8 @@ class OrderController extends Controller
             $message = $order->payment_status === 'paid'
                 ? 'Order cancelled and money refunded successfully.'
                 : 'Order cancelled successfully.';
+            $admins = User::role('admin')->get();
+            Notification::send($admins, new OrderCancelled($order));
 
             return response_success($message);
         } catch (\Exception $e) {
@@ -127,39 +133,71 @@ class OrderController extends Controller
         try {
             $userId = auth('sanctum')->id();
             $items = $request->validated('items');
+            $paymentMethod = $request->validated('payment_method');
 
-            $cardDetails = $request->only(['card_number', 'exp_month', 'exp_year', 'cvv']);
+            //Get Delivery Information
+            $deliveryInfo = $request->only(['full_name', 'email', 'phone', 'address', 'payment_method']);
 
-            $order = $this->orderService->createOrder($userId, $items);
+            //Create the base order first, passing the delivery info
+            $order = $this->orderService->createOrder($userId, $items, $deliveryInfo);
 
-            $paymentResponse = $this->paymentService->processCharge(
-                $order->total_amount,
-                $cardDetails,
-                $order->order_number
-            );
+            // Handle the payment flow based on the selected method
+            if ($paymentMethod === 'cash_on_delivery') {
 
-            $approvalStatus = $paymentResponse['gatewayResponse']['transactionState'] ?? null;
-            $transactionId = $paymentResponse['gatewayResponse']['transactionProcessingDetails']['transactionId'] ?? null;
+                // Mark order as unpaid/pending for cash_on_delivery
+                $order->update(['payment_status' => 'pending']);
 
-            if ($approvalStatus !== 'CAPTURED' && $approvalStatus !== 'APPROVED') {
-                return response_error('Payment was not approved by gateway.', $paymentResponse, 400);
+                // Optional: Save a pending transaction record for cash_on_delivery
+                $order->transactions()->create([
+                    'user_id' => $userId,
+                    'gateway' => 'cod',
+                    'amount' => $order->total_amount,
+                    'currency' => 'USD',
+                    'status' => 'pending',
+                ]);
+            } else {
+
+                // Handle Card Payment (Fiserv)
+                $cardDetails = $request->only(['card_number', 'exp_month', 'exp_year', 'cvv']);
+
+                $paymentResponse = $this->paymentService->processCharge(
+                    $order->total_amount,
+                    $cardDetails,
+                    $order->order_number
+                );
+
+                $approvalStatus = $paymentResponse['gatewayResponse']['transactionState'] ?? null;
+                $transactionId = $paymentResponse['gatewayResponse']['transactionProcessingDetails']['transactionId'] ?? null;
+
+                if ($approvalStatus !== 'CAPTURED' && $approvalStatus !== 'APPROVED') {
+                    // Update order status to failed so it doesn't stay stuck as pending forever
+                    $order->update(['payment_status' => 'failed']);
+
+                    return response_error('Payment was not approved by gateway.', $paymentResponse, 400);
+                }
+
+                // Save the transaction record (Success state)
+                $order->transactions()->create([
+                    'user_id' => $userId,
+                    'gateway' => 'fiserv',
+                    'gateway_transaction_id' => $transactionId,
+                    'amount' => $order->total_amount,
+                    'currency' => 'USD',
+                    'status' => 'success',
+                    'metadata' => $paymentResponse,
+                ]);
+
+                // Update order payment status to paid
+                $order->update(['payment_status' => 'paid']);
             }
 
-            // 3. Save the transaction record (Success state)
-            $order->transactions()->create([
-                'user_id' => $userId,
-                'gateway' => 'fiserv',
-                'gateway_transaction_id' => $transactionId,
-                'amount' => $order->total_amount,
-                'currency' => 'USD',
-                'status' => 'success',
-                'metadata' => $paymentResponse,
-            ]);
+            // 4. Fetch all admins and send notification
+            $admins = User::role('admin')->get();
+            Notification::send($admins, new NewOrderPlaced($order));
 
-            // 4. Update order payment status to paid
-            $order->update(['payment_status' => 'paid']);
+            $message = $paymentMethod === 'cod' ? 'Order placed successfully.' : 'Order placed and payment processed successfully.';
 
-            return response_success('Order placed and payment processed successfully.', [
+            return response_success($message, [
                 'order' => $order,
             ], 201);
         } catch (Exception $e) {
