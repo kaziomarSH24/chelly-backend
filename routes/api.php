@@ -130,6 +130,4 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('v1')->group(functio
 
     //test fiserv api
     });
-    Route::get('/v1/test-fiserv', [\App\Http\Controllers\Api\V1\FiservController::class, 'processPayment']);
-    Route::get('/v1/fiserv-balance', [\App\Http\Controllers\Api\V1\FiservController::class, 'checkBalance']);
-    Route::get('/v1/fiserv-refund', [\App\Http\Controllers\Api\V1\FiservController::class, 'processRefund']);
+   

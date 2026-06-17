@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Notifications\OrderRefunded;
 use App\Services\FiservPaymentService;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
+use App\Notifications\OrderStatusUpdated;
 
 class OrderController extends Controller
 {
@@ -35,7 +37,8 @@ class OrderController extends Controller
         ]);
 
         $order = $this->orderService->updateOrderStatus($id, $validated['status']);
-
+        // Notify the user about the status change
+        $order->user->notify(new OrderStatusUpdated($order, $validated['status']));
         return response_success('Order status updated successfully.', $order);
     }
 
@@ -113,6 +116,9 @@ class OrderController extends Controller
                 ? 'Full refund processed successfully.'
                 : 'Partial refund of $' . $refundAmount . ' processed successfully.';
 
+            // Notify the user about the refund
+            $refundType = $isFullRefundNow ? 'full' : 'partial';
+            $order->user->notify(new OrderRefunded($order, $refundAmount, $refundType));
             return response_success($message);
         } catch (\Exception $e) {
             return response_error('Failed to process refund.', ['error' => $e->getMessage()], 500);
