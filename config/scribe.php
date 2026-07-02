@@ -113,7 +113,7 @@ INTRO,
     'auth' => [
         'enabled' => true,
         'default' => true,
-        'in' => AuthIn::BEARER->value,
+        'in' => 'bearer',
         'name' => 'Authorization',
         'use_value' => env('SCRIBE_AUTH_KEY'), // Provide a testing token in .env for response calls
         'placeholder' => 'Bearer {YOUR_TOKEN}',

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,17 +12,27 @@
     <style>
         /* Animation for toast */
         @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
+
         .toast-enter {
             animation: slideIn 0.3s ease-out forwards;
         }
     </style>
 </head>
+
 <body class="bg-gray-50 text-gray-800 font-sans min-h-screen">
 
-    <nav class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
+    <nav
+        class="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex justify-between items-center sticky top-0 z-40">
         <div class="text-xl font-bold text-indigo-600 flex items-center gap-2">
             <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white">R</div>
             Reverb Tester
@@ -30,9 +41,12 @@
         <div class="relative">
             <button class="relative p-2 rounded-full hover:bg-gray-100 transition-colors">
                 <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9">
+                    </path>
                 </svg>
-                <span id="badge-count" class="hidden absolute top-0 right-0 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse border-2 border-white">
+                <span id="badge-count"
+                    class="hidden absolute top-0 right-0 bg-red-500 text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full animate-pulse border-2 border-white">
                     0
                 </span>
             </button>
@@ -54,13 +68,14 @@
                         <div id="status-indicator" class="w-3 h-3 rounded-full bg-yellow-500"></div>
                     </div>
                 </div>
-                <pre class="text-sm font-mono text-green-400 overflow-x-auto whitespace-pre-wrap"><code id="console-log">Initializing Echo...</code></pre>
+                <pre
+                    class="text-sm font-mono text-green-400 overflow-x-auto whitespace-pre-wrap"><code id="console-log">Initializing Echo...</code></pre>
             </div>
         </div>
     </main>
 
     <div id="toast-container" class="fixed top-20 right-6 z-50 flex flex-col gap-3 pointer-events-none">
-        </div>
+    </div>
 
     <script>
         // Setup state variables
@@ -110,17 +125,17 @@
             const echo = new window.Echo({
                 broadcaster: 'reverb',
                 key: 'oskghldeokkdfjdslhnfd',
-                wsHost: '10.10.10.55',
+                wsHost: '10.10.28.53',
                 wsPort: 8020,
                 wssPort: 8020,
                 forceTLS: false,
                 enabledTransports: ['ws', 'wss'],
 
                 // Sanctum API Token Authentication Setup
-                authEndpoint: '/api/broadcasting/auth', // API রাউটের মাধ্যমে অথেনটিকেট করা
+                authEndpoint: '/api/broadcasting/auth',
                 auth: {
                     headers: {
-                        Authorization: 'Bearer 69|Zx171kzaYZ4BoKoOeLjogl2MIeZf3Sn0TfJ7SAPa12a72e3a',
+                        Authorization: 'Bearer 94|byDi12ddm6JS5JN6rLPy6VMQzHM1K56hT3SKBu9Z7d3eea50',
                         Accept: 'application/json'
                     }
                 }
@@ -140,17 +155,12 @@
 
             // ==========================================
             // LISTENER CONFIGURATION
-            // ==========================================
-
-            // ইউজারের আইডির ওপর ভিত্তি করে প্রাইভেট চ্যানেলে লিসেন করা
-            // ধরে নিচ্ছি এই অ্যাডমিন টোকেনটির ইউজার আইডি ১
-            const userId = 21;
+            // =========================================
+            const userId =1;
 
             echo.private(`App.Models.User.${userId}`)
                 .notification((notification) => {
                     logMsg('Real-time Notification Received: ' + JSON.stringify(notification));
-
-                    // Notification type চেক করে টোস্ট দেখানো
                     if(notification.type === 'new_order') {
                         showToast('🎉 New Order!', notification.message);
                     } else if (notification.type === 'refunded') {
@@ -170,4 +180,5 @@
         }
     </script>
 </body>
+
 </html>
