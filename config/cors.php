@@ -25,6 +25,12 @@ return [
         'http://10.10.10.55:3000',
         'http://10.10.10.55:60',
         'http://localhost:5173',
+        'http://lovelysmealplans.com',
+        'http://www.lovelysmealplans.com',
+        'http://dashboard.lovelysmealplans.com',
+        'https://lovelysmealplans.com',
+        'https://www.lovelysmealplans.com',
+        'https://dashboard.lovelysmealplans.com',
     ],
 
     'allowed_origins_patterns' => [],
