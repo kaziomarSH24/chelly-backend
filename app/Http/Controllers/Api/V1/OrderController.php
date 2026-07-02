@@ -193,6 +193,7 @@ class OrderController extends Controller
 
             // 4. Fetch all admins and send notification
             $admins = User::role('admin')->get();
+            // dd($admins);
             Notification::send($admins, new NewOrderPlaced($order));
 
             $message = $paymentMethod === 'cod' ? 'Order placed successfully.' : 'Order placed and payment processed successfully.';
