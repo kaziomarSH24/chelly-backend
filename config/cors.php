@@ -22,8 +22,8 @@ return [
     // 'allowed_origins' => ['*'],
     'allowed_origins' => [
         'http://localhost:3000',
-        'http://10.10.10.55:3000',
-        'http://10.10.10.55:60',
+        'http://10.10.28.53:3000',
+        'http://10.10.28.53:60',
         'http://localhost:5173',
         'http://lovelysmealplans.com',
         'http://www.lovelysmealplans.com',

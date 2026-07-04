@@ -48,31 +48,31 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # - name: Deploy to Server via SSH
-      #   uses: appleboy/ssh-action@master
-      #   with:
-      #     host: ${{ secrets.SERVER_HOST }}
-      #     username: ${{ secrets.SERVER_USER }}
-      #     key: ${{ secrets.SSH_PRIVATE_KEY }}
-      #     port: 22
-      #     script: |
-      #       cd ${{ secrets.DEPLOY_PATH }}
-      #       docker compose pull kevin-app queue-worker scheduler
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            cd ${{ secrets.DEPLOY_PATH }}
+            docker compose pull chelly-app queue-worker scheduler chelly-reverb
 
-      #       docker compose up -d --no-deps kevin-app queue-worker scheduler
+            docker compose up -d --no-deps chelly-app queue-worker scheduler chelly-reverb
 
-      #       echo "Waiting for container to initialize..."
-      #       sleep 10
+            echo "Waiting for container to initialize..."
+            sleep 10
 
-      #       echo "🔧 Fixing Permissions & Directories..."
+            echo "🔧 Fixing Permissions & Directories..."
 
-      #       docker compose exec -T kevin-app mkdir -p /var/www/resources/views
-      #       docker compose exec -T kevin-app mkdir -p /var/www/storage/framework/{views,cache,sessions}
+            docker compose exec -T chelly-app mkdir -p /var/www/resources/views
+            docker compose exec -T chelly-app mkdir -p /var/www/storage/framework/{views,cache,sessions}
 
-      #       docker compose exec -T kevin-app chown -R www-data:www-data /var/www/resources/views /var/www/storage
-      #       docker compose exec -T kevin-app chmod -R 775 /var/www/resources/views /var/www/storage
+            docker compose exec -T chelly-app chown -R www-data:www-data /var/www/resources/views /var/www/storage
+            docker compose exec -T chelly-app chmod -R 775 /var/www/resources/views /var/www/storage
 
-      #       echo "🧹 Clearing Cache..."
-      #       docker compose exec -T kevin-app php artisan optimize:clear
+            echo "🧹 Clearing Cache..."
+            docker compose exec -T chelly-app php artisan optimize:clear
 
-      #       docker image prune -f
+            docker image prune -f
