@@ -38,7 +38,7 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          # Single architecture: amd64 (most common)
+          # Single architecture: amd64 (most common) 
           platforms: linux/amd64
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/chelly-backend:latest
