@@ -75,4 +75,7 @@ jobs:
             echo "🧹 Clearing Cache..."
             docker compose exec -T chelly-app php artisan optimize:clear
 
+            echo "🔄 Reloading Nginx..."
+            docker compose exec -T chelly-nginx nginx -s reload
+
             docker image prune -f

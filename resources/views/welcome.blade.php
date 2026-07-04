@@ -124,11 +124,11 @@
         try {
             const echo = new window.Echo({
                 broadcaster: 'reverb',
-                key: 'oskghldeokkdfjdslhnfd',
-                wsHost: '10.10.28.53',
-                wsPort: 8020,
-                wssPort: 8020,
-                forceTLS: false,
+                key: '{{ env('REVERB_APP_KEY', 'oskghldeokkdfjdslhnfd') }}',
+                wsHost: 'api.lovelysmealplans.com',
+                wsPort: 80,
+                wssPort: 443,
+                forceTLS: (window.location.protocol === 'https:'),
                 enabledTransports: ['ws', 'wss'],
 
                 // Sanctum API Token Authentication Setup
