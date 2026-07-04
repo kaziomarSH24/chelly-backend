@@ -135,7 +135,7 @@
                 authEndpoint: '/api/broadcasting/auth',
                 auth: {
                     headers: {
-                        Authorization: 'Bearer 94|byDi12ddm6JS5JN6rLPy6VMQzHM1K56hT3SKBu9Z7d3eea50',
+                        Authorization: 'Bearer 6|g49DFJJfm7p2jI9aAK3jU0FxqOg25YcpDmaGQkvx15da5f64',
                         Accept: 'application/json'
                     }
                 }
