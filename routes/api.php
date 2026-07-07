@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AddressController;
 use App\Http\Controllers\Api\V1\Admin\BannerController;
 use App\Http\Controllers\Api\V1\Admin\BlogController;
+use App\Http\Controllers\Api\V1\Admin\CollectionController;
 use App\Http\Controllers\Api\V1\Admin\FoodController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController;
 use App\Http\Controllers\Api\V1\Admin\DashboardController;
@@ -42,6 +43,8 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
 
     //*** Category */
     Route::apiResource('categories', CategoryController::class);
+    //*** Collections */
+    Route::apiResource('collections',CollectionController::class);
     //*** Food api */
     Route::apiResource('foods', FoodController::class);
     //*** Offers api */

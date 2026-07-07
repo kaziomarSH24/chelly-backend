@@ -72,20 +72,48 @@ class ImportShopifyData extends Command
         $products = $response->json()['products'] ?? [];
 
         foreach ($products as $item) {
-            // Determine category from product type, or use a default one
-            $categoryName = !empty($item['product_type']) ? $item['product_type'] : 'General Food';
+            // Determine category from Shopify GraphQL Taxonomy
+            $categoryName = 'General Food';
+            $productId = $item['id'];
+            
+            // Fetch category taxonomy from GraphQL
+            $graphqlQuery = '{ product(id: "gid://shopify/Product/' . $productId . '") { category { name } } }';
+            
+            try {
+                $graphqlResponse = Http::withHeaders([
+                    'X-Shopify-Access-Token' => config('services.shopify.access_token'),
+                    'Content-Type' => 'application/json',
+                ])->post("{$baseUrl}/graphql.json", [
+                    'query' => $graphqlQuery
+                ]);
+                
+                $graphqlData = $graphqlResponse->json();
+                
+                if (!empty($graphqlData['data']['product']['category']['name'])) {
+                    $categoryName = $graphqlData['data']['product']['category']['name'];
+                } elseif (!empty($item['product_type'])) {
+                    $categoryName = $item['product_type'];
+                }
+            } catch (\Exception $e) {
+                if (!empty($item['product_type'])) {
+                    $categoryName = $item['product_type'];
+                }
+            }
 
             // Fetch or create the category
             $category = Category::firstOrCreate(
                 ['name' => $categoryName],
-                ['status' => 'active']
+                [
+                    'slug' => \Illuminate\Support\Str::slug($categoryName),
+                    'status' => 'active',
+                ]
             );
 
             // Determine status mapping
             $status = ($item['status'] === 'active') ? 'available' : 'unavailable';
 
             // Map and store product into foods table
-            Food::updateOrCreate(
+            $food = Food::updateOrCreate(
                 ['name' => $item['title']], // Using name to prevent exact duplicates
                 [
                     'category_id' => $category->id,
@@ -96,6 +124,43 @@ class ImportShopifyData extends Command
                     'status' => $status,
                 ]
             );
+
+            // Determine Shopify Collections and sync
+            $collectionIdsToSync = [];
+
+            // Try to fetch custom collections for this product
+            $collectionsResponse = Http::withHeaders([
+                'X-Shopify-Access-Token' => $accessToken,
+            ])->get("{$baseUrl}/custom_collections.json", ['product_id' => $item['id']]);
+
+            if ($collectionsResponse->successful() && !empty($collectionsResponse->json()['custom_collections'])) {
+                foreach ($collectionsResponse->json()['custom_collections'] as $c) {
+                    $collection = \App\Models\Collection::firstOrCreate(
+                        ['name' => $c['title']],
+                        ['status' => 'active']
+                    );
+                    $collectionIdsToSync[] = $collection->id;
+                }
+            }
+
+            // Try smart collections
+            $smartCollectionsResponse = Http::withHeaders([
+                'X-Shopify-Access-Token' => $accessToken,
+            ])->get("{$baseUrl}/smart_collections.json", ['product_id' => $item['id']]);
+
+            if ($smartCollectionsResponse->successful() && !empty($smartCollectionsResponse->json()['smart_collections'])) {
+                foreach ($smartCollectionsResponse->json()['smart_collections'] as $c) {
+                    $collection = \App\Models\Collection::firstOrCreate(
+                        ['name' => $c['title']],
+                        ['status' => 'active']
+                    );
+                    $collectionIdsToSync[] = $collection->id;
+                }
+            }
+
+            if (!empty($collectionIdsToSync)) {
+                $food->collections()->syncWithoutDetaching($collectionIdsToSync);
+            }
         }
 
         $this->info(count($products) . ' foods processed.');
