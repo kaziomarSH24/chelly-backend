@@ -28,7 +28,7 @@ class CollectionController extends Controller
     {
         $perPage = request()->query('per_page', 10);
         $collection = \App\Models\Collection::findOrFail($id);
-        $foods = $collection->foods()->paginate($perPage);
+        $foods = $collection->foods()->with('variants')->paginate($perPage);
         
         $data = [
             'collection' => $collection,
