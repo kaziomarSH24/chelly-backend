@@ -90,15 +90,15 @@ class AuthService
     {
         $user = User::where('email', $data['email'])->first();
         if ($user->hasVerifiedEmail()) {
-            throw new \Exception('Email already verified.');
+            throw ValidationException::withMessages(['email' => 'Email already verified.']);
         }
 
         if (Carbon::now()->isAfter($user->otp_expires_at)) {
-            throw new \Exception('Verification code/link has expired.');
+            throw ValidationException::withMessages(['otp' => 'Verification code/link has expired.']);
         }
 
         if ((isset($data['otp']) && $data['otp'] && $user->otp != $data['otp']) || (isset($data['token']) && $data['token'] && $user->verification_token != $data['token'])) {
-            throw new \Exception('Invalid verification code or token.');
+            throw ValidationException::withMessages(['otp' => 'Invalid verification code or token.']);
         }
 
         $user->markEmailAsVerified();
@@ -118,11 +118,11 @@ class AuthService
         $passwordReset = DB::table('password_reset_tokens')->where('email', $data['email'])->first();
 
         if (!$passwordReset || $passwordReset->otp != $data['otp']) {
-            throw new \Exception('Invalid OTP.');
+            throw ValidationException::withMessages(['otp' => 'Invalid OTP.']);
         }
         if (Carbon::parse($passwordReset->created_at)->addMinutes(10)->isPast()) {
             DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
-            throw new \Exception('OTP has expired.');
+            throw ValidationException::withMessages(['otp' => 'OTP has expired.']);
         }
 
         $resetSessionToken = Str::random(64);
@@ -139,7 +139,7 @@ class AuthService
         $passwordReset = DB::table('password_reset_tokens')->where('email', $data['email'])->first();
 
         if (!$passwordReset || !Hash::check($data['reset_token'], $passwordReset->token)) {
-            throw new \Exception('Invalid or expired reset token.');
+            throw ValidationException::withMessages(['reset_token' => 'Invalid or expired reset token.']);
         }
 
         User::where('email', $data['email'])->update(['password' => Hash::make($data['password'])]);
@@ -154,7 +154,7 @@ class AuthService
         $user = User::where('email', $email)->first();
 
         if ($user->hasVerifiedEmail()) {
-            throw new \Exception('Email already verified.');
+            throw ValidationException::withMessages(['email' => 'Email already verified.']);
         }
 
         $otp = random_int(100000, 999999);
@@ -170,7 +170,7 @@ class AuthService
     {
         $user = User::where('email', $email)->first();
         if (!$user) {
-            throw new \Exception('User not found.');
+            throw ValidationException::withMessages(['email' => 'User not found.']);
         }
 
         DB::table('password_reset_tokens')->where('email', $email)->delete();
@@ -198,11 +198,11 @@ class AuthService
         $passwordReset = DB::table('password_reset_tokens')->where('email', $data['email'])->first();
 
         if (!$passwordReset || !Hash::check($data['token'], $passwordReset->token) || $passwordReset->otp != $data['otp']) {
-            throw new \Exception('Invalid OTP or token.');
+            throw ValidationException::withMessages(['otp' => 'Invalid OTP or token.']);
         }
         if (Carbon::parse($passwordReset->created_at)->addMinutes(10)->isPast()) {
             DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
-            throw new \Exception('OTP/link has expired.');
+            throw ValidationException::withMessages(['otp' => 'OTP/link has expired.']);
         }
 
         User::where('email', $data['email'])->update(['password' => Hash::make($data['password'])]);
