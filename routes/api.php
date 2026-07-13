@@ -44,6 +44,8 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
     //*** Category */
     Route::apiResource('categories', CategoryController::class);
     //*** Collections */
+    Route::post('collections/{collection}/foods/attach', [CollectionController::class, 'attachFoods']);
+    Route::post('collections/{collection}/foods/detach', [CollectionController::class, 'detachFoods']);
     Route::apiResource('collections',CollectionController::class);
     //*** Food api */
     Route::apiResource('foods', FoodController::class);

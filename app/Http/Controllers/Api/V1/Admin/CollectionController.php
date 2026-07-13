@@ -56,4 +56,30 @@ class CollectionController extends Controller
         $collection->delete();
         return response_success('Collection deleted successfully.');
     }
+
+    public function attachFoods(Request $request, $id)
+    {
+        $request->validate([
+            'food_ids' => 'required|array',
+            'food_ids.*' => 'exists:foods,id'
+        ]);
+
+        $collection = \App\Models\Collection::findOrFail($id);
+        $collection->foods()->syncWithoutDetaching($request->food_ids);
+
+        return response_success('Foods added to collection successfully.');
+    }
+
+    public function detachFoods(Request $request, $id)
+    {
+        $request->validate([
+            'food_ids' => 'required|array',
+            'food_ids.*' => 'exists:foods,id'
+        ]);
+
+        $collection = \App\Models\Collection::findOrFail($id);
+        $collection->foods()->detach($request->food_ids);
+
+        return response_success('Foods removed from collection successfully.');
+    }
 }

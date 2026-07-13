@@ -8,4 +8,12 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::get('/variant-demo', function () {
+    return view('variant-demo');
+});
+
+Route::get('/admin-variant-form', function () {
+    return view('admin-variant-form');
+});
+
 

@@ -120,10 +120,31 @@ class ImportShopifyData extends Command
                     'description' => $item['body_html'] ?? null,
                     'price' => $item['variants'][0]['price'] ?? 0.00,
                     'stock' => $item['variants'][0]['inventory_quantity'] ?? 0,
+                    'options' => $item['options'] ?? null,
                     'image' => $item['image']['src'] ?? null,
                     'status' => $status,
                 ]
             );
+
+            // Sync Variants
+            if (!empty($item['variants'])) {
+                foreach ($item['variants'] as $variant) {
+                    \App\Models\FoodVariant::updateOrCreate(
+                        [
+                            'food_id' => $food->id,
+                            'shopify_variant_id' => $variant['id'] ?? null,
+                        ],
+                        [
+                            'title' => $variant['title'] ?? 'Default',
+                            'price' => $variant['price'] ?? 0.00,
+                            'stock' => $variant['inventory_quantity'] ?? 0,
+                            'option1' => $variant['option1'] ?? null,
+                            'option2' => $variant['option2'] ?? null,
+                            'option3' => $variant['option3'] ?? null,
+                        ]
+                    );
+                }
+            }
 
             // Determine Shopify Collections and sync
             $collectionIdsToSync = [];

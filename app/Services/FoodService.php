@@ -35,7 +35,7 @@ class FoodService extends BaseService
      */
     protected function getAllowedIncludes(): array
     {
-        return ['category'];
+        return ['category', 'variants'];
     }
 
     /**
@@ -52,13 +52,30 @@ class FoodService extends BaseService
     public function storeFood(Request $request): Food
     {
         $data = $request->validated();
+        
+        $variants = $data['variants'] ?? [];
+        unset($data['variants']);
 
         if ($request->hasFile('image')) {
-
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        return $this->create($data);
+        $food = $this->create($data);
+
+        // Sync Variants
+        if (!empty($variants)) {
+            $variants = array_map(function($variant) {
+                if (empty($variant['title'])) {
+                    $titleParts = array_filter([$variant['option1'] ?? null, $variant['option2'] ?? null, $variant['option3'] ?? null]);
+                    $variant['title'] = !empty($titleParts) ? implode(' / ', $titleParts) : 'Default';
+                }
+                return $variant;
+            }, $variants);
+
+            $food->variants()->createMany($variants);
+        }
+
+        return $food->load('category', 'variants');
     }
 
     /**
@@ -69,12 +86,44 @@ class FoodService extends BaseService
         $data = $request->validated();
         $food = $this->getById($id);
 
+        $variants = $data['variants'] ?? [];
+        unset($data['variants']);
+
         if ($request->hasFile('image')) {
             $this->deleteFile($food->image);
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        return $this->update($id, $data);
+        $this->update($id, $data);
+
+        // Sync Variants
+        if (!empty($variants)) {
+            // Delete variants that are not in the payload
+            $variantIds = collect($variants)->pluck('id')->filter()->toArray();
+            $food->variants()->whereNotIn('id', $variantIds)->delete();
+
+            // Update or create variants
+            foreach ($variants as $variantData) {
+                if (empty($variantData['title'])) {
+                    $titleParts = array_filter([$variantData['option1'] ?? null, $variantData['option2'] ?? null, $variantData['option3'] ?? null]);
+                    $variantData['title'] = !empty($titleParts) ? implode(' / ', $titleParts) : 'Default';
+                }
+
+                if (isset($variantData['id'])) {
+                    $food->variants()->where('id', $variantData['id'])->update($variantData);
+                } else {
+                    $food->variants()->create($variantData);
+                }
+            }
+        } else {
+            // If variants array is empty or not provided, we could either do nothing or delete all.
+            // Usually, an empty array means clear all variants. But let's only clear if explicitly passed as empty array.
+            if ($request->has('variants')) {
+                $food->variants()->delete();
+            }
+        }
+
+        return $food->fresh('category', 'variants');
     }
 
     /**

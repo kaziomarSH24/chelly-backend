@@ -15,6 +15,10 @@ class Food extends Model
     protected $guarded = ['id'];
     protected $table = 'foods';
 
+    protected $casts = [
+        'options' => 'array',
+    ];
+
     /**
      * Get the category that owns the food.
      */
@@ -22,6 +26,11 @@ class Food extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    public function variants()
+    {
+        return $this->hasMany(FoodVariant::class);
     }
 
     public function collections()

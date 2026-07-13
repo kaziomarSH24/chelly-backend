@@ -20,6 +20,14 @@ class FoodRequest extends BaseRequest
             'stock' => 'required|integer|min:0',
             'status' => 'nullable|in:available,unavailable',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10192', // 10MB max
+            'options' => 'nullable|array',
+            'variants' => 'nullable|array',
+            'variants.*.title' => 'nullable|string|max:255',
+            'variants.*.price' => 'required_with:variants|numeric|min:0',
+            'variants.*.stock' => 'required_with:variants|integer|min:0',
+            'variants.*.option1' => 'nullable|string|max:255',
+            'variants.*.option2' => 'nullable|string|max:255',
+            'variants.*.option3' => 'nullable|string|max:255',
         ];
 
         // Handle unique name validation dynamically for store and update
