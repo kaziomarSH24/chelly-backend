@@ -196,7 +196,7 @@ class OrderController extends Controller
             // dd($admins);
             Notification::send($admins, new NewOrderPlaced($order));
 
-            $message = $paymentMethod === 'cod' ? 'Order placed successfully.' : 'Order placed and payment processed successfully.';
+            $message = $paymentMethod === 'cash_on_delivery' ? 'Order placed successfully.' : 'Order placed and payment processed successfully.';
 
             return response_success($message, [
                 'order' => $order,
