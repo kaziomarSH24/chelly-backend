@@ -34,9 +34,20 @@ trait FileUploadTrait
         }
 
         $file = $request->file($fieldName);
+        return $this->handleUploadedFile($file, $directory, $width, $height, $quality, $forceWebp);
+    }
+
+    public function handleUploadedFile(
+        $file,
+        string $directory,
+        ?int $width = null,
+        ?int $height = null,
+        int $quality = 90,
+        bool $forceWebp = false
+    ): ?string {
         $originalFileName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $originalFileName = Str::slug($originalFileName);
-        $fileName = time() . '_' . $originalFileName;
+        $fileName = time() . '_' . uniqid() . '_' . $originalFileName;
 
         if (str_starts_with($file->getMimeType(), 'image/')) {
             $manager = new ImageManager(new Driver());

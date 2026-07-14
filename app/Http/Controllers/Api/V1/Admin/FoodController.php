@@ -33,8 +33,8 @@ class FoodController extends Controller
 
     public function show($id)
     {
-        // Eager load the category and variants relationships automatically via the service
-        $food = $this->foodService->getById($id, ['category', 'variants']);
+        // Eager load the category, variants, and images relationships automatically via the service
+        $food = $this->foodService->getById($id, ['category', 'variants', 'images']);
         return response_success('Food details retrieved successfully.', $food);
     }
 

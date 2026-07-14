@@ -20,6 +20,10 @@ class FoodRequest extends BaseRequest
             'stock' => 'required|integer|min:0',
             'status' => 'nullable|in:available,unavailable',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:10192', // 10MB max
+            'images' => 'nullable|array',
+            'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:10192',
+            'deleted_image_ids' => 'nullable|array',
+            'deleted_image_ids.*' => 'integer|exists:food_images,id',
             'options' => 'nullable|array',
             'variants' => 'nullable|array',
             'variants.*.title' => 'nullable|string|max:255',

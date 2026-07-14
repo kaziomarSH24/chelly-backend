@@ -36,7 +36,7 @@ class FoodService extends BaseService
      */
     protected function getAllowedIncludes(): array
     {
-        return ['category', 'variants'];
+        return ['category', 'variants', 'images'];
     }
 
     /**
@@ -56,12 +56,15 @@ class FoodService extends BaseService
         
         $variants = $data['variants'] ?? [];
         unset($data['variants']);
+        
+        $images = $request->file('images') ?? [];
+        unset($data['images']);
 
         if ($request->hasFile('image')) {
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        return DB::transaction(function () use ($data, $variants) {
+        return DB::transaction(function () use ($data, $variants, $images) {
             $food = $this->create($data);
 
             // Sync Variants
@@ -77,7 +80,24 @@ class FoodService extends BaseService
                 $food->variants()->createMany($variants);
             }
 
-            return $food->load('category', 'variants');
+            // Sync Images
+            if (!empty($images)) {
+                $foodImages = [];
+                foreach ($images as $index => $imageFile) {
+                    $path = $this->handleUploadedFile($imageFile, 'foods', forceWebp: true);
+                    if ($path) {
+                        $foodImages[] = [
+                            'image_path' => $path,
+                            'sort_order' => $index
+                        ];
+                    }
+                }
+                if (!empty($foodImages)) {
+                    $food->images()->createMany($foodImages);
+                }
+            }
+
+            return $food->load('category', 'variants', 'images');
         });
     }
 
@@ -91,13 +111,19 @@ class FoodService extends BaseService
 
         $variants = $data['variants'] ?? [];
         unset($data['variants']);
+        
+        $images = $request->file('images') ?? [];
+        unset($data['images']);
+        
+        $deletedImageIds = $data['deleted_image_ids'] ?? [];
+        unset($data['deleted_image_ids']);
 
         if ($request->hasFile('image')) {
             $this->deleteFile($food->image);
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        return DB::transaction(function () use ($id, $data, $variants, $food, $request) {
+        return DB::transaction(function () use ($id, $data, $variants, $food, $request, $images, $deletedImageIds) {
             $this->update($id, $data);
 
             // Sync Variants
@@ -127,7 +153,35 @@ class FoodService extends BaseService
                 }
             }
 
-            return $food->fresh('category', 'variants');
+            // Delete specific old images
+            if (!empty($deletedImageIds)) {
+                $imagesToDelete = $food->images()->whereIn('id', $deletedImageIds)->get();
+                foreach ($imagesToDelete as $img) {
+                    $this->deleteFile($img->getRawOriginal('image_path'));
+                    $img->delete();
+                }
+            }
+
+            // Upload new images
+            if (!empty($images)) {
+                $foodImages = [];
+                $currentMaxSort = $food->images()->max('sort_order') ?? 0;
+                
+                foreach ($images as $index => $imageFile) {
+                    $path = $this->handleUploadedFile($imageFile, 'foods', forceWebp: true);
+                    if ($path) {
+                        $foodImages[] = [
+                            'image_path' => $path,
+                            'sort_order' => $currentMaxSort + $index + 1
+                        ];
+                    }
+                }
+                if (!empty($foodImages)) {
+                    $food->images()->createMany($foodImages);
+                }
+            }
+
+            return $food->fresh('category', 'variants', 'images');
         });
     }
 
@@ -138,6 +192,10 @@ class FoodService extends BaseService
     {
         $food = $this->getById($id);
         $this->deleteFile($food->image);
+        
+        foreach ($food->images as $img) {
+            $this->deleteFile($img->getRawOriginal('image_path'));
+        }
 
         return $this->delete($id);
     }

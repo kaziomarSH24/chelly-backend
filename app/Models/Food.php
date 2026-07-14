@@ -33,6 +33,11 @@ class Food extends Model
         return $this->hasMany(FoodVariant::class);
     }
 
+    public function images()
+    {
+        return $this->hasMany(FoodImage::class);
+    }
+
     public function collections()
     {
         return $this->belongsToMany(Collection::class);
