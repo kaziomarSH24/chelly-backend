@@ -24,6 +24,8 @@ class FoodRequest extends BaseRequest
             'images.*' => 'image|mimes:jpeg,png,jpg,webp|max:10192',
             'deleted_image_ids' => 'nullable|array',
             'deleted_image_ids.*' => 'integer|exists:food_images,id',
+            'collections' => 'nullable|array',
+            'collections.*' => 'integer|exists:collections,id',
             'options' => 'nullable|array',
             'variants' => 'nullable|array',
             'variants.*.title' => 'nullable|string|max:255',

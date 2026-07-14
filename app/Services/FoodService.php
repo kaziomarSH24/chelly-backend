@@ -36,7 +36,7 @@ class FoodService extends BaseService
      */
     protected function getAllowedIncludes(): array
     {
-        return ['category', 'variants', 'images'];
+        return ['category', 'variants', 'images', 'collections'];
     }
 
     /**
@@ -60,12 +60,19 @@ class FoodService extends BaseService
         $images = $request->file('images') ?? [];
         unset($data['images']);
 
+        $collections = $data['collections'] ?? [];
+        unset($data['collections']);
+
         if ($request->hasFile('image')) {
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        return DB::transaction(function () use ($data, $variants, $images) {
+        return DB::transaction(function () use ($data, $variants, $images, $collections) {
             $food = $this->create($data);
+
+            if (!empty($collections)) {
+                $food->collections()->sync($collections);
+            }
 
             // Sync Variants
             if (!empty($variants)) {
@@ -115,6 +122,9 @@ class FoodService extends BaseService
         $images = $request->file('images') ?? [];
         unset($data['images']);
         
+        $collections = $data['collections'] ?? [];
+        unset($data['collections']);
+        
         $deletedImageIds = $data['deleted_image_ids'] ?? [];
         unset($data['deleted_image_ids']);
 
@@ -123,8 +133,11 @@ class FoodService extends BaseService
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        return DB::transaction(function () use ($id, $data, $variants, $food, $request, $images, $deletedImageIds) {
+        return DB::transaction(function () use ($id, $data, $variants, $food, $request, $images, $deletedImageIds, $collections) {
             $this->update($id, $data);
+
+            // Sync Collections
+            $food->collections()->sync($collections);
 
             // Sync Variants
             if (!empty($variants)) {
