@@ -11,7 +11,7 @@ class FoodVariant extends Model
     use HasFactory;
 
     protected $guarded = ['id'];
-    
+    protected $touches = ['food'];    
     /**
      * Get the food that owns the variant.
      */

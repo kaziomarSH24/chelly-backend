@@ -105,6 +105,7 @@ abstract class BaseService
                 ->allowedFilters($this->getAllowedFilters())
                 ->allowedIncludes($this->getAllowedIncludes())
                 ->allowedSorts($this->getAllowedSorts())
+                ->defaultSort('-created_at')
                 ->paginate(request()->input('per_page', 15))
                 ->appends(request()->query());
         };

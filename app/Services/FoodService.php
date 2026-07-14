@@ -7,6 +7,7 @@ use App\Traits\FileUploadTrait;
 use Illuminate\Http\Request;
 use Spatie\QueryBuilder\AllowedFilter;
 use App\Filters\GlobalSearchFilter;
+use Illuminate\Support\Facades\DB;
 use Stripe\ApiOperations\All;
 
 class FoodService extends BaseService
@@ -60,22 +61,24 @@ class FoodService extends BaseService
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        $food = $this->create($data);
+        return DB::transaction(function () use ($data, $variants) {
+            $food = $this->create($data);
 
-        // Sync Variants
-        if (!empty($variants)) {
-            $variants = array_map(function($variant) {
-                if (empty($variant['title'])) {
-                    $titleParts = array_filter([$variant['option1'] ?? null, $variant['option2'] ?? null, $variant['option3'] ?? null]);
-                    $variant['title'] = !empty($titleParts) ? implode(' / ', $titleParts) : 'Default';
-                }
-                return $variant;
-            }, $variants);
+            // Sync Variants
+            if (!empty($variants)) {
+                $variants = array_map(function($variant) {
+                    if (empty($variant['title'])) {
+                        $titleParts = array_filter([$variant['option1'] ?? null, $variant['option2'] ?? null, $variant['option3'] ?? null]);
+                        $variant['title'] = !empty($titleParts) ? implode(' / ', $titleParts) : 'Default';
+                    }
+                    return $variant;
+                }, $variants);
 
-            $food->variants()->createMany($variants);
-        }
+                $food->variants()->createMany($variants);
+            }
 
-        return $food->load('category', 'variants');
+            return $food->load('category', 'variants');
+        });
     }
 
     /**
@@ -94,36 +97,38 @@ class FoodService extends BaseService
             $data['image'] = $this->handleFileUpload($request, 'image', 'foods', forceWebp: true);
         }
 
-        $this->update($id, $data);
+        return DB::transaction(function () use ($id, $data, $variants, $food, $request) {
+            $this->update($id, $data);
 
-        // Sync Variants
-        if (!empty($variants)) {
-            // Delete variants that are not in the payload
-            $variantIds = collect($variants)->pluck('id')->filter()->toArray();
-            $food->variants()->whereNotIn('id', $variantIds)->delete();
+            // Sync Variants
+            if (!empty($variants)) {
+                // Delete variants that are not in the payload
+                $variantIds = collect($variants)->pluck('id')->filter()->toArray();
+                $food->variants()->whereNotIn('id', $variantIds)->delete();
 
-            // Update or create variants
-            foreach ($variants as $variantData) {
-                if (empty($variantData['title'])) {
-                    $titleParts = array_filter([$variantData['option1'] ?? null, $variantData['option2'] ?? null, $variantData['option3'] ?? null]);
-                    $variantData['title'] = !empty($titleParts) ? implode(' / ', $titleParts) : 'Default';
+                // Update or create variants
+                foreach ($variants as $variantData) {
+                    if (empty($variantData['title'])) {
+                        $titleParts = array_filter([$variantData['option1'] ?? null, $variantData['option2'] ?? null, $variantData['option3'] ?? null]);
+                        $variantData['title'] = !empty($titleParts) ? implode(' / ', $titleParts) : 'Default';
+                    }
+
+                    if (isset($variantData['id'])) {
+                        $food->variants()->where('id', $variantData['id'])->update($variantData);
+                    } else {
+                        $food->variants()->create($variantData);
+                    }
                 }
-
-                if (isset($variantData['id'])) {
-                    $food->variants()->where('id', $variantData['id'])->update($variantData);
-                } else {
-                    $food->variants()->create($variantData);
+            } else {
+                // If variants array is empty or not provided, we could either do nothing or delete all.
+                // Usually, an empty array means clear all variants. But let's only clear if explicitly passed as empty array.
+                if ($request->has('variants')) {
+                    $food->variants()->delete();
                 }
             }
-        } else {
-            // If variants array is empty or not provided, we could either do nothing or delete all.
-            // Usually, an empty array means clear all variants. But let's only clear if explicitly passed as empty array.
-            if ($request->has('variants')) {
-                $food->variants()->delete();
-            }
-        }
 
-        return $food->fresh('category', 'variants');
+            return $food->fresh('category', 'variants');
+        });
     }
 
     /**

@@ -11,12 +11,12 @@ class FoodController extends Controller
 {
     public function __construct(protected FoodService $foodService)
     {
+        $this->middleware('auth:sanctum')->except(['index', 'show']);
+
         // Protect resource routes, leaving index and show public
         $this->authorizeResource(Food::class, 'food', [
             'except' => ['index', 'show']
         ]);
-
-        $this->middleware('auth:sanctum')->except(['index', 'show']);
     }
 
     public function index()
