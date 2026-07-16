@@ -28,6 +28,7 @@ class FoodRequest extends BaseRequest
             'collections.*' => 'integer|exists:collections,id',
             'options' => 'nullable|array',
             'variants' => 'nullable|array',
+            'variants.*.id' => 'nullable',
             'variants.*.title' => 'nullable|string|max:255',
             'variants.*.price' => 'required_with:variants|numeric|min:0',
             'variants.*.stock' => 'required_with:variants|integer|min:0',

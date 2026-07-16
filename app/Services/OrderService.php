@@ -53,8 +53,8 @@ class OrderService extends BaseService
         return DB::transaction(function () use ($userId, $items, $deliveryInfo) {
             $preparedItems = $this->prepareItemsData($items);
 
-            // Calculate grand total from prepared items
-            $totalAmount = collect($preparedItems)->sum('subtotal');
+            // Calculate grand total from prepared items using bundle logic
+            $totalAmount = $this->calculateBundleTotal($preparedItems);
 
             // Create the main order record
             $order = Order::create([
@@ -86,7 +86,7 @@ class OrderService extends BaseService
 
             // Set plan duration
             $days = $item['plan_type'] === 'weekly' ? 7 : 1;
-            $subtotal = $food->price * $item['quantity'] * $days;
+            $subtotal = $food->price * $item['quantity'];
 
             $orderItemsData[] = [
                 'food_id' => $food->id,
@@ -99,6 +99,40 @@ class OrderService extends BaseService
         }
 
         return $orderItemsData;
+    }
+
+    private function calculateBundleTotal(array $preparedItems): float
+    {
+        $allItems = [];
+        foreach ($preparedItems as $item) {
+            for ($i = 0; $i < $item['quantity']; $i++) {
+                $allItems[] = (float) $item['unit_price'];
+            }
+        }
+
+        rsort($allItems);
+
+        $total = 0.0;
+        $remainingQty = count($allItems);
+        $index = 0;
+
+        while ($remainingQty > 0) {
+            if ($remainingQty >= 21) {
+                $total += 120.0;
+                $index += 21;
+                $remainingQty -= 21;
+            } elseif ($remainingQty >= 10) {
+                $total += 70.0;
+                $index += 10;
+                $remainingQty -= 10;
+            } else {
+                $total += $allItems[$index];
+                $index += 1;
+                $remainingQty -= 1;
+            }
+        }
+
+        return $total;
     }
 
     private function createOrderItemsAndSchedules(Order $order, array $preparedItems): void

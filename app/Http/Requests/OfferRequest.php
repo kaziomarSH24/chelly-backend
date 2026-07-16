@@ -13,8 +13,9 @@ class OfferRequest extends BaseRequest
      */
     public function rules(): array
     {
-       $rules = [
+        $rules = [
             'status' => 'nullable|in:active,inactive',
+            'link' => 'nullable|url|max:1000',
         ];
 
         // Handle unique title validation dynamically for store and update
