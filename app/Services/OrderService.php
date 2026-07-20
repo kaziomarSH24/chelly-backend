@@ -212,23 +212,6 @@ class OrderService extends BaseService
     {
         $order = $this->update($orderId, ['status' => $status]);
 
-        if (in_array($status, ['completed', 'cancelled'])) {
-            $ebtDetail = \App\Models\OrderEbtDetail::where('order_id', $orderId)->first();
-            if ($ebtDetail && $ebtDetail->card_number) {
-                // If it's already masked, avoid re-masking
-                if (!str_contains($ebtDetail->card_number, '****')) {
-                    $cardNumber = $ebtDetail->card_number;
-                    $last4 = strlen($cardNumber) >= 4 ? substr($cardNumber, -4) : $cardNumber;
-                    $maskedCard = '**** **** **** ' . $last4;
-                    
-                    $ebtDetail->update([
-                        'card_number' => $maskedCard,
-                        'pin' => null,
-                    ]);
-                }
-            }
-        }
-
         return $order;
     }
 }
