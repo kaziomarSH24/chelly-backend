@@ -210,7 +210,31 @@ class OrderService extends BaseService
      */
     public function updateOrderStatus(int $orderId, string $status): Order
     {
-        $order = $this->update($orderId, ['status' => $status]);
+        $updateData = ['status' => $status];
+
+        // Auto-update payment status to paid if order is completed
+        if ($status === 'completed') {
+            $updateData['payment_status'] = 'paid';
+        }
+
+        $order = $this->update($orderId, $updateData);
+
+        if (in_array($status, ['completed', 'cancelled'])) {
+            $ebtDetail = \App\Models\OrderEbtDetail::where('order_id', $orderId)->first();
+            if ($ebtDetail && $ebtDetail->card_number) {
+                // If it's not already masked, mask it in the database for permanent security
+                if (!str_contains($ebtDetail->card_number, '****')) {
+                    $cardNumber = $ebtDetail->card_number;
+                    $last4 = strlen($cardNumber) >= 4 ? substr($cardNumber, -4) : $cardNumber;
+                    $maskedCard = '**** **** **** ' . $last4;
+                    
+                    $ebtDetail->update([
+                        'card_number' => $maskedCard,
+                        'pin' => '****', // Setting to string to satisfy NOT NULL constraint
+                    ]);
+                }
+            }
+        }
 
         return $order;
     }
