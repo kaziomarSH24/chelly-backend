@@ -43,4 +43,9 @@ class Order extends Model
     {
         return $this->morphMany(Transaction::class, 'payable');
     }
+
+    public function ebtDetails()
+    {
+        return $this->hasOne(OrderEbtDetail::class);
+    }
 }

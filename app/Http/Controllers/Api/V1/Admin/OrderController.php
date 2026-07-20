@@ -26,7 +26,7 @@ class OrderController extends Controller
 
     public function show(string $id)
     {
-        $order = $this->orderService->getById($id, ['user', 'items.food', 'deliveries', 'address']);
+        $order = $this->orderService->getById($id, ['user', 'items.food', 'deliveries', 'address', 'ebtDetails']);
         return response_success('Order details retrieved successfully.', $order);
     }
 

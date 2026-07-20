@@ -194,7 +194,7 @@ class OrderService extends BaseService
                 \Spatie\QueryBuilder\AllowedFilter::partial('food', 'items.food.name'),
             ])
             ->allowedSorts(['created_at', 'total_amount', 'status'])
-            ->with(['user', 'items.food']) // Eager load relations for the table
+            ->with(['user', 'items.food', 'ebtDetails']) // Eager load relations for the table
             ->withCount([
                 'deliveries as total_deliveries',
                 'deliveries as completed_deliveries' => function ($query) {
@@ -210,6 +210,25 @@ class OrderService extends BaseService
      */
     public function updateOrderStatus(int $orderId, string $status): Order
     {
-        return $this->update($orderId, ['status' => $status]);
+        $order = $this->update($orderId, ['status' => $status]);
+
+        if (in_array($status, ['completed', 'cancelled'])) {
+            $ebtDetail = \App\Models\OrderEbtDetail::where('order_id', $orderId)->first();
+            if ($ebtDetail && $ebtDetail->card_number) {
+                // If it's already masked, avoid re-masking
+                if (!str_contains($ebtDetail->card_number, '****')) {
+                    $cardNumber = $ebtDetail->card_number;
+                    $last4 = strlen($cardNumber) >= 4 ? substr($cardNumber, -4) : $cardNumber;
+                    $maskedCard = '**** **** **** ' . $last4;
+                    
+                    $ebtDetail->update([
+                        'card_number' => $maskedCard,
+                        'pin' => null,
+                    ]);
+                }
+            }
+        }
+
+        return $order;
     }
 }

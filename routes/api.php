@@ -58,6 +58,10 @@ Route::middleware('throttle:api')->prefix('v1')->group(function () {
 
     //** settings public api
     Route::get('settings', [SettingController::class, 'index']);
+
+    //*** EBT Orders & Packages */
+    Route::post('ebt-orders', [\App\Http\Controllers\Api\V1\EbtOrderController::class, 'store']);
+    Route::get('ebt-packages', [\App\Http\Controllers\Api\V1\EbtPackageController::class, 'index']);
     Route::get('settings/{key}', [SettingController::class, 'show']);
 
     //faqs
@@ -129,6 +133,11 @@ Route::middleware(['auth:sanctum', 'throttle:api'])->prefix('v1')->group(functio
         //settings
         Route::get('/settings', [SettingController::class, 'index']);
         Route::post('/settings', [SettingController::class, 'update']);
+        // EBT Packages
+        Route::get('/ebt-packages', [\App\Http\Controllers\Api\V1\EbtPackageController::class, 'adminIndex']);
+        Route::post('/ebt-packages', [\App\Http\Controllers\Api\V1\EbtPackageController::class, 'store']);
+        Route::put('/ebt-packages/{id}', [\App\Http\Controllers\Api\V1\EbtPackageController::class, 'update']);
+        Route::delete('/ebt-packages/{id}', [\App\Http\Controllers\Api\V1\EbtPackageController::class, 'destroy']);
     });
 
     // Fallback route for undefined API endpoints
