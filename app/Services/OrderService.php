@@ -80,9 +80,27 @@ class OrderService extends BaseService
     private function prepareItemsData(array $items): array
     {
         $orderItemsData = [];
+        $lowStockFoods = [];
+        
+        // Fetch setting for low stock threshold, default to 5
+        $lowStockSetting = \App\Models\Setting::where('key', 'low_stock_threshold')->first();
+        $lowStockThreshold = $lowStockSetting ? (int)$lowStockSetting->value : 5;
 
         foreach ($items as $item) {
             $food = Food::findOrFail($item['food_id']);
+
+            if ($food->stock < $item['quantity']) {
+                throw new \Exception("Insufficient stock for {$food->name}. Available: {$food->stock}");
+            }
+            
+            $oldStock = $food->stock;
+            $food->decrement('stock', $item['quantity']);
+            $newStock = $food->fresh()->stock;
+            
+            // Check if stock crossed the threshold
+            if ($newStock <= $lowStockThreshold && $oldStock > $lowStockThreshold) {
+                $lowStockFoods[] = $food;
+            }
 
             // Set plan duration
             $days = $item['plan_type'] === 'weekly' ? 7 : 1;
@@ -96,6 +114,14 @@ class OrderService extends BaseService
                 'unit_price' => $food->price,
                 'subtotal' => $subtotal,
             ];
+        }
+        
+        // Dispatch low stock alerts
+        if (!empty($lowStockFoods)) {
+            $admins = \App\Models\User::role('admin')->get();
+            foreach ($lowStockFoods as $food) {
+                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\LowStockAlert($food));
+            }
         }
 
         return $orderItemsData;

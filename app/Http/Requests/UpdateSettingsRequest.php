@@ -28,6 +28,7 @@ class UpdateSettingsRequest extends BaseRequest
             'payment_guidelines' => 'nullable|string',
             
             'allowed_checkout_days' => 'nullable|string',
+            'low_stock_threshold' => 'nullable|integer',
         ];
     }
 }
