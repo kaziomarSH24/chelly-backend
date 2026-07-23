@@ -104,6 +104,9 @@ class OrderService extends BaseService
                     // Send food object to LowStockAlert so it can use food_id and name
                     $lowStockFoods[] = $food;
                 }
+                
+                // Also decrement the main food stock
+                $food->decrement('stock', $item['quantity']);
             } else {
                 if ($food->stock < $item['quantity']) {
                     throw new \Exception("Insufficient stock for {$food->name}. Available: {$food->stock}");
