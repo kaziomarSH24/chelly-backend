@@ -135,8 +135,24 @@ class OrderController extends Controller
             $items = $request->validated('items');
             $paymentMethod = $request->validated('payment_method');
 
-            //Get Delivery Information
             $deliveryInfo = $request->only(['full_name', 'email', 'phone', 'address', 'payment_method']);
+
+            // Validate Day-based Checkout Restrictions
+            $settingService = app(\App\Services\SettingService::class);
+            $allowedDaysSetting = $settingService->getSettingByKey('allowed_checkout_days');
+            
+            // If the setting exists, decode it. Otherwise, default to empty array (meaning no restriction, or restricted depending on logic. Let's assume if setting is missing, we don't restrict to avoid breaking existing flow).
+            if ($allowedDaysSetting) {
+                $allowedDays = json_decode($allowedDaysSetting, true) ?? [];
+                
+                // Get current day in the store's timezone (using config)
+                $currentDay = \Carbon\Carbon::now()->timezone(config('app.timezone'))->format('l');
+
+                if (!in_array($currentDay, $allowedDays)) {
+                    $allowedDaysStr = empty($allowedDays) ? 'any days' : implode(' and ', $allowedDays);
+                    return response_error("Checkout is disabled. We currently only accept orders on {$allowedDaysStr}.", [], 403);
+                }
+            }
 
             //Create the base order first, passing the delivery info
             $order = $this->orderService->createOrder($userId, $items, $deliveryInfo);

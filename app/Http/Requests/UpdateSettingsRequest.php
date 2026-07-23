@@ -26,6 +26,8 @@ class UpdateSettingsRequest extends BaseRequest
             'privacy_policy' => 'nullable|string',
             'terms_conditions' => 'nullable|string',
             'payment_guidelines' => 'nullable|string',
+            
+            'allowed_checkout_days' => 'nullable|string',
         ];
     }
 }
