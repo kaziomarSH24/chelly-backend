@@ -23,6 +23,7 @@ class OrderRequest extends BaseRequest
             // Order Items Validation
             'items' => 'required|array|min:1',
             'items.*.food_id' => 'required|exists:foods,id',
+            'items.*.variant_id' => 'nullable|exists:food_variants,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.plan_type' => 'required|in:regular,weekly',
 

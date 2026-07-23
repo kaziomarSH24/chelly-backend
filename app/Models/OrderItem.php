@@ -17,4 +17,9 @@ class OrderItem extends Model
     {
         return $this->belongsTo(Food::class);
     }
+
+    public function variant()
+    {
+        return $this->belongsTo(FoodVariant::class, 'variant_id');
+    }
 }

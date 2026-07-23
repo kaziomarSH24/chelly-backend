@@ -88,30 +88,50 @@ class OrderService extends BaseService
 
         foreach ($items as $item) {
             $food = Food::findOrFail($item['food_id']);
+            $variantId = $item['variant_id'] ?? null;
 
-            if ($food->stock < $item['quantity']) {
-                throw new \Exception("Insufficient stock for {$food->name}. Available: {$food->stock}");
-            }
-            
-            $oldStock = $food->stock;
-            $food->decrement('stock', $item['quantity']);
-            $newStock = $food->fresh()->stock;
-            
-            // Check if stock crossed the threshold
-            if ($newStock <= $lowStockThreshold && $oldStock > $lowStockThreshold) {
-                $lowStockFoods[] = $food;
+            if ($variantId) {
+                $variant = \App\Models\FoodVariant::findOrFail($variantId);
+                if ($variant->stock < $item['quantity']) {
+                    throw new \Exception("Insufficient stock for {$food->name} (Variant). Available: {$variant->stock}");
+                }
+                
+                $oldStock = $variant->stock;
+                $variant->decrement('stock', $item['quantity']);
+                $newStock = $variant->fresh()->stock;
+                
+                if ($newStock <= $lowStockThreshold && $oldStock > $lowStockThreshold) {
+                    // Send food object to LowStockAlert so it can use food_id and name
+                    $lowStockFoods[] = $food;
+                }
+            } else {
+                if ($food->stock < $item['quantity']) {
+                    throw new \Exception("Insufficient stock for {$food->name}. Available: {$food->stock}");
+                }
+                
+                $oldStock = $food->stock;
+                $food->decrement('stock', $item['quantity']);
+                $newStock = $food->fresh()->stock;
+                
+                if ($newStock <= $lowStockThreshold && $oldStock > $lowStockThreshold) {
+                    $lowStockFoods[] = $food;
+                }
             }
 
             // Set plan duration
             $days = $item['plan_type'] === 'weekly' ? 7 : 1;
-            $subtotal = $food->price * $item['quantity'];
+            
+            // If variant exists, price is variant price, otherwise food price
+            $unitPrice = $variantId ? $variant->price : $food->price;
+            $subtotal = $unitPrice * $item['quantity'];
 
             $orderItemsData[] = [
                 'food_id' => $food->id,
+                'variant_id' => $variantId,
                 'plan_type' => $item['plan_type'],
                 'total_days' => $days,
                 'quantity' => $item['quantity'],
-                'unit_price' => $food->price,
+                'unit_price' => $unitPrice,
                 'subtotal' => $subtotal,
             ];
         }
@@ -193,7 +213,7 @@ class OrderService extends BaseService
             ->where('user_id', $userId)
             ->allowedFilters(['status'])
             ->allowedSorts(['created_at', 'total_amount'])
-            ->with(['items.food'])
+            ->with(['items.food', 'items.variant'])
             ->withCount([
                 'deliveries as total_deliveries',
                 'deliveries as completed_deliveries' => function ($query) {
@@ -220,7 +240,7 @@ class OrderService extends BaseService
                 \Spatie\QueryBuilder\AllowedFilter::partial('food', 'items.food.name'),
             ])
             ->allowedSorts(['created_at', 'total_amount', 'status'])
-            ->with(['user', 'items.food', 'ebtDetails']) // Eager load relations for the table
+            ->with(['user', 'items.food', 'items.variant', 'ebtDetails']) // Eager load relations for the table
             ->withCount([
                 'deliveries as total_deliveries',
                 'deliveries as completed_deliveries' => function ($query) {
